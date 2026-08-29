@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-policy-changed-reapproval",
+  "order_id": "ORD-1007",
+  "signal": "high-value replacement remains approval-class after the policy release changes",
+  "requested_outcome": "invalidate the stale approval basis and create a fresh checkpoint after replanning",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z"
+}

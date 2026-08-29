@@ -1,0 +1,1561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A beginner-friendly tutorial for the TruvaG3 Agentic Commerce Control Tower capability demo.">
+  <title>Agentic Commerce Control Tower — Beginner Tutorial</title>
+  <script>
+    (function () {
+      var theme = "";
+      try {
+        theme = localStorage.getItem("agentic-commerce-tutorial-theme") || "";
+      } catch (error) {
+        theme = "";
+      }
+      if (theme !== "light" && theme !== "dark") {
+        theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      }
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="tutorial.css">
+  <script src="tutorial.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to the tutorial</a>
+
+  <header class="hero">
+    <div class="hero-inner">
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">
+        <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+        <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+        <span id="theme-toggle-label">Night mode</span>
+      </button>
+      <p class="eyebrow">Beginner tutorial · Local Kubernetes capability demo</p>
+      <h1>How an AI agent helps recover an online order</h1>
+      <p class="hero-summary">
+        This tutorial starts with the customer problem. It then explains every
+        service, tool, decision, and live test. You do not need prior knowledge
+        of AI agents, Go, Redis, Kubernetes, or graph databases.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="#business-process">Start with the business process</a>
+        <a class="button secondary" href="#live-run">See a real successful run</a>
+      </div>
+      <ul class="hero-facts" aria-label="Tutorial scope">
+        <li><strong>1</strong><span>AI agent</span></li>
+        <li><strong>2</strong><span>tool services</span></li>
+        <li><strong>10</strong><span>public tool capabilities</span></li>
+        <li><strong>3</strong><span>application pods</span></li>
+      </ul>
+    </div>
+  </header>
+
+  <div class="page-shell">
+    <aside class="lesson-nav" aria-label="Tutorial chapters">
+      <p class="lesson-nav-title">Learning path</p>
+      <ol>
+        <li><a href="#before-you-start">Before you start</a></li>
+        <li><a href="#business-process">The business process</a></li>
+        <li><a href="#automation-boundary">Where AI helps</a></li>
+        <li><a href="#system-setup">System setup</a></li>
+        <li><a href="#components">Components</a></li>
+        <li><a href="#tools">Tools and capabilities</a></li>
+        <li><a href="#workflow">End-to-end workflow</a></li>
+        <li><a href="#scenarios">Scenario explorer</a></li>
+        <li><a href="#live-run">Real live run</a></li>
+        <li><a href="gateway-xray.html">Gateway X-ray</a></li>
+        <li><a href="#human-approval">Human approval</a></li>
+        <li><a href="#scale">Requests and scale</a></li>
+        <li><a href="#other-domains">Other domains</a></li>
+        <li><a href="#hands-on">Run it yourself</a></li>
+        <li><a href="#observability">Verify the result</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+      </ol>
+    </aside>
+
+    <main id="main-content">
+      <section id="before-you-start" class="chapter intro-chapter">
+        <p class="chapter-number">Chapter 1</p>
+        <h2>Before you start</h2>
+        <p class="lead">
+          We will explain the system from the outside in. First we will look at
+          the work a business must do. Only then will we introduce the software.
+        </p>
+
+        <div class="learning-grid">
+          <article>
+            <span class="learning-number">1</span>
+            <h3>Understand the problem</h3>
+            <p>Why a missing order is not solved by one simple database update.</p>
+          </article>
+          <article>
+            <span class="learning-number">2</span>
+            <h3>Meet the system</h3>
+            <p>What the agent, Commerce Core, knowledge gateway, Redis, and telemetry do.</p>
+          </article>
+          <article>
+            <span class="learning-number">3</span>
+            <h3>Follow one execution</h3>
+            <p>How an event becomes evidence, a decision, a safe command, and a verified result.</p>
+          </article>
+          <article>
+            <span class="learning-number">4</span>
+            <h3>Check the proof</h3>
+            <p>How task status, Registry, Jaeger, and final order state support the same conclusion.</p>
+          </article>
+        </div>
+
+        <div class="plain-note">
+          <h3>Three terms to know now</h3>
+          <dl class="starter-terms">
+            <div>
+              <dt>AI agent</dt>
+              <dd>Software that uses a language model to plan a task and call other services.</dd>
+            </div>
+            <div>
+              <dt>Tool service</dt>
+              <dd>A normal web service that performs a specific, controlled operation for the agent.</dd>
+            </div>
+            <div>
+              <dt>Deterministic</dt>
+              <dd>The same validated input produces the same result. No language model chooses the result.</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section id="business-process" class="chapter">
+        <p class="chapter-number">Chapter 2</p>
+        <h2>Start with the business process</h2>
+        <p class="lead">
+          A customer paid for an order. The carrier accepted the package, but
+          the package is now missing. The company must decide what to do next.
+        </p>
+
+        <article class="story-card" aria-labelledby="story-title">
+          <div class="story-order">
+            <p class="mini-label">Example case</p>
+            <h3 id="story-title">Order ORD-1003</h3>
+            <dl>
+              <div><dt>Value</dt><dd>69 US dollars</dd></div>
+              <div><dt>Status</dt><dd>Missing in transit</dd></div>
+              <div><dt>Carrier</dt><dd>USPS Priority Mail Express</dd></div>
+              <div><dt>Payment</dt><dd>Paid</dd></div>
+              <div><dt>Replacement stock</dt><dd>Available</dd></div>
+              <div><dt>Restriction</dt><dd>None</dd></div>
+            </dl>
+          </div>
+          <div class="story-question">
+            <p class="mini-label">Business question</p>
+            <p class="big-question">Can the company create a replacement automatically?</p>
+            <p>
+              A correct answer depends on current order facts, company authority,
+              carrier or seller rules, evidence validity, approval thresholds,
+              and the risk of processing the same request twice.
+            </p>
+          </div>
+        </article>
+
+        <h3 class="section-heading">What a human operations specialist normally does</h3>
+        <ol class="business-timeline">
+          <li>
+            <span class="timeline-number">1</span>
+            <div><strong>Open the order.</strong><p>Check payment, fulfillment, carrier, inventory, value, risk, restrictions, and the current order version.</p></div>
+          </li>
+          <li>
+            <span class="timeline-number">2</span>
+            <div><strong>List possible actions.</strong><p>For example: wait, refund, replace, cancel, or file a carrier claim.</p></div>
+          </li>
+          <li>
+            <span class="timeline-number">3</span>
+            <div><strong>Find the policies that apply.</strong><p>Search public rules, carrier terms, seller policies, and internal company policy.</p></div>
+          </li>
+          <li>
+            <span class="timeline-number">4</span>
+            <div><strong>Resolve exceptions and conflicts.</strong><p>Check dates, market, product category, carrier, and whether a narrow rule overrides a general rule.</p></div>
+          </li>
+          <li>
+            <span class="timeline-number">5</span>
+            <div><strong>Make an authority decision.</strong><p>Decide whether the action is allowed, denied, missing evidence, conflicting, or needs approval.</p></div>
+          </li>
+          <li>
+            <span class="timeline-number">6</span>
+            <div><strong>Perform the action safely.</strong><p>Confirm that the order and policy have not changed. Prevent a duplicate refund or replacement.</p></div>
+          </li>
+          <li>
+            <span class="timeline-number">7</span>
+            <div><strong>Verify and communicate.</strong><p>Check the final order state and then notify the customer.</p></div>
+          </li>
+        </ol>
+
+        <div class="decision-road" role="img" aria-label="The business process can end in automatic action, human approval, denial, or safe abstention">
+          <div class="decision-start">Investigation complete</div>
+          <div class="road-arrow" aria-hidden="true">→</div>
+          <div class="decision-branches">
+            <div class="branch good"><strong>Allowed</strong><span>Act automatically</span></div>
+            <div class="branch human"><strong>Approval required</strong><span>Pause for a person</span></div>
+            <div class="branch stop"><strong>Denied</strong><span>Do not act</span></div>
+            <div class="branch caution"><strong>Not enough certainty</strong><span>Stop and explain why</span></div>
+          </div>
+        </div>
+
+        <div class="key-message">
+          <strong>The automation goal</strong>
+          <p>
+            Use AI to coordinate the investigation. Keep policy authority,
+            approval, order changes, duplicate protection, and verification in
+            normal software that can enforce exact rules.
+          </p>
+        </div>
+      </section>
+
+      <section id="automation-boundary" class="chapter">
+        <p class="chapter-number">Chapter 3</p>
+        <h2>Where AI helps—and where it does not</h2>
+        <p class="lead">
+          The language model is useful when the path is not known in advance.
+          It is not trusted to authorize or change an order.
+        </p>
+
+        <div class="boundary-visual">
+          <article class="boundary-side ai-side">
+            <p class="mini-label">Uses a language model</p>
+            <h3>The agent investigates</h3>
+            <ul class="check-list">
+              <li>Understands the order-risk request.</li>
+              <li>Chooses which read-only capabilities to call.</li>
+              <li>Searches for relevant policy evidence.</li>
+              <li>Follows useful policy relationships.</li>
+              <li>Builds a step-by-step investigation.</li>
+              <li>Summarises the verified result.</li>
+            </ul>
+          </article>
+
+          <div class="boundary-gate" aria-label="Deterministic control boundary">
+            <span>Controlled JSON calls</span>
+            <strong>Safety boundary</strong>
+            <span>Validated results</span>
+          </div>
+
+          <article class="boundary-side rules-side">
+            <p class="mini-label">Does not use a language model</p>
+            <h3>The tools enforce</h3>
+            <ul class="check-list">
+              <li>Return current order and inventory facts.</li>
+              <li>Return exact, dated policy sections.</li>
+              <li>Verify signed evidence receipts.</li>
+              <li>Apply fixed eligibility and approval rules.</li>
+              <li>Reject stale policy or order state.</li>
+              <li>Change and verify the order exactly once.</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="do-not-confuse">
+          <h3>Do not confuse these two kinds of knowledge</h3>
+          <div class="compare-grid">
+            <article>
+              <h4>Skill: the operating procedure</h4>
+              <p>
+                A small set of instructions for the agent. It says: read order
+                state first, search the correct scope, read decisive sections,
+                ask the evaluator, never execute a denial, and always verify.
+              </p>
+            </article>
+            <article>
+              <h4>Domain pack: the policy corpus</h4>
+              <p>
+                A versioned collection of policy sections, sources, dates,
+                relationships, search vocabulary, and retrieval tests. Large
+                domain knowledge belongs here, not inside the skill.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="system-setup" class="chapter">
+        <p class="chapter-number">Chapter 4</p>
+        <h2>The system setup</h2>
+        <p class="lead">
+          The demo adds three application services to a local Kubernetes
+          cluster. Kubernetes runs each service in a pod.
+        </p>
+
+        <div class="system-map" role="img" aria-label="Order events enter the agent. The agent uses Redis and calls Commerce Core and Domain Knowledge Gateway. All three send telemetry to Registry and Jaeger.">
+          <div class="map-row entrance-row">
+            <div class="map-node external"><span class="node-type">Input</span><strong>Order-risk event</strong><small>HTTP webhook</small></div>
+            <span class="map-arrow" aria-hidden="true">→</span>
+            <div class="map-node agent-node"><span class="node-type">Pod 1 · AI agent</span><strong>Order Operations Agent</strong><small>Accepts events and coordinates work</small></div>
+          </div>
+          <div class="map-connector" aria-hidden="true">↓</div>
+          <div class="map-row service-row">
+            <div class="map-node shared-node"><span class="node-type">Shared service</span><strong>Redis</strong><small>Tasks, deduplication, skills, checkpoints</small></div>
+            <span class="map-arrow two-way" aria-hidden="true">↔</span>
+            <div class="map-node tool-node"><span class="node-type">Pod 2 · No AI</span><strong>Commerce Core</strong><small>Order facts, policy decision, safe action</small></div>
+            <span class="map-arrow two-way" aria-hidden="true">↔</span>
+            <div class="map-node tool-node"><span class="node-type">Pod 3 · No AI</span><strong>Knowledge Gateway</strong><small>Policy search, graph links, exact reads</small></div>
+          </div>
+          <div class="map-connector" aria-hidden="true">↓</div>
+          <div class="map-row telemetry-row">
+            <div class="map-node observe-node"><span class="node-type">Shared observability</span><strong>Registry + Jaeger + logs</strong><small>Plans, calls, evidence, timing, and service traces</small></div>
+          </div>
+        </div>
+
+        <h3 class="section-heading">Pod, process, and worker</h3>
+        <div class="containment-diagram" role="img" aria-label="A Kubernetes deployment creates an agent pod. The pod runs one Go process. The process contains HTTP handlers and two task worker goroutines.">
+          <div class="containment deployment-box">
+            <span>Kubernetes Deployment</span>
+            <div class="containment pod-box">
+              <span>1 agent pod</span>
+              <div class="containment process-box">
+                <span>1 Go process</span>
+                <div class="goroutine-grid">
+                  <div>HTTP request goroutines</div>
+                  <div>Worker goroutine 1</div>
+                  <div>Worker goroutine 2</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <ul class="simple-definitions">
+          <li><strong>Pod:</strong> one running Kubernetes instance of a service.</li>
+          <li><strong>Process:</strong> the compiled Go program running inside the pod.</li>
+          <li><strong>Goroutine:</strong> a lightweight unit of concurrent work managed by Go.</li>
+          <li><strong>Worker:</strong> a long-running goroutine that takes one task at a time from Redis.</li>
+        </ul>
+
+        <div class="shared-services">
+          <h3>Shared services reused from TruvaG3</h3>
+          <p>
+            These are not new control-tower workloads. They already belong to
+            the local framework environment.
+          </p>
+          <ul class="tag-list">
+            <li>Redis</li><li>Skills API</li><li>Service registry</li><li>Ingress</li>
+            <li>OpenTelemetry</li><li>Registry Viewer</li><li>Jaeger</li>
+            <li>Loki</li><li>Prometheus</li><li>Grafana</li>
+          </ul>
+          <p class="small-note">
+            LadybugDB is a library and database file inside the knowledge
+            gateway pod. It is not a separate pod.
+          </p>
+        </div>
+      </section>
+
+      <section id="components" class="chapter">
+        <p class="chapter-number">Chapter 5</p>
+        <h2>What every component really does</h2>
+        <p class="lead">
+          Each component owns a different kind of truth. This separation is the
+          main safety design.
+        </p>
+
+        <div class="component-stack">
+          <article class="component-card agent-component">
+            <div class="component-heading">
+              <span class="component-index">A</span>
+              <div><p class="mini-label">Uses AI</p><h3>Order Operations Agent</h3></div>
+            </div>
+            <p class="component-purpose">
+              Acts like a digital operations coordinator. It investigates a
+              case, but it does not own orders, policies, or permission to mutate.
+            </p>
+            <div class="component-columns">
+              <div><h4>Receives</h4><ul><li>Order-risk webhook</li><li>Order ID and signal</li><li>Optional operator-constrained action</li></ul></div>
+              <div><h4>Does</h4><ul><li>Creates a Redis task</li><li>Loads the recovery skill</li><li>Plans and calls tools</li><li>Creates or resumes human-approval checkpoints</li></ul></div>
+              <div><h4>Returns</h4><ul><li>Task status</li><li>Structured final outcome</li><li>Evidence and command audit summary</li></ul></div>
+              <div><h4>Cannot do</h4><ul><li>Invent order facts</li><li>Create a valid decision token</li><li>Bypass approval</li><li>Change an order directly</li></ul></div>
+            </div>
+          </article>
+
+          <article class="component-card commerce-component">
+            <div class="component-heading">
+              <span class="component-index">B</span>
+              <div><p class="mini-label">No AI</p><h3>Commerce Core tool service</h3></div>
+            </div>
+            <p class="component-purpose">
+              Acts like the order system and policy enforcement service. It owns
+              current synthetic order state and is the only component that can
+              perform the demo's business mutation.
+            </p>
+            <div class="component-columns">
+              <div><h4>Stores</h4><ul><li>Eight synthetic orders</li><li>Order versions</li><li>Policy decisions</li><li>Commands and notifications</li></ul></div>
+              <div><h4>Decides</h4><ul><li>Eligibility</li><li>Approval threshold</li><li>Denial</li><li>Missing or conflicting evidence</li></ul></div>
+              <div><h4>Protects</h4><ul><li>Policy release match</li><li>Evidence receipt validity</li><li>Order version</li><li>Idempotency</li></ul></div>
+              <div><h4>Does not</h4><ul><li>Search natural-language policy</li><li>Call an AI provider</li><li>Load skills</li><li>Interpret free-form instructions</li></ul></div>
+            </div>
+          </article>
+
+          <article class="component-card gateway-component">
+            <div class="component-heading">
+              <span class="component-index">C</span>
+              <div><p class="mini-label">No AI</p><h3>Domain Knowledge Gateway tool service</h3></div>
+            </div>
+            <p class="component-purpose">
+              Acts like a controlled policy library. It finds relevant policy
+              sections, follows explicit relationships, and proves exact reads.
+            </p>
+            <div class="component-columns">
+              <div><h4>Loads</h4><ul><li>One fixed, versioned domain pack</li><li>Source metadata</li><li>Policy sections</li><li>Relations and search aliases</li></ul></div>
+              <div><h4>Retrieves</h4><ul><li>Filtered word matches</li><li>Curated meaning-alias matches</li><li>Limited relationship paths</li><li>Exact cited sections</li></ul></div>
+              <div><h4>Proves</h4><ul><li>Release ID and hash</li><li>Tenant and jurisdiction</li><li>Channel and date scope</li><li>Signed exact-read receipt</li></ul></div>
+              <div><h4>Does not</h4><ul><li>Approve an action</li><li>Change an order</li><li>Call an AI provider</li><li>Return the whole corpus to the prompt</li></ul></div>
+            </div>
+          </article>
+
+          <article class="component-card shared-component">
+            <div class="component-heading">
+              <span class="component-index">D</span>
+              <div><p class="mini-label">Shared framework services</p><h3>Redis, Skills, Registry, and telemetry</h3></div>
+            </div>
+            <div class="component-columns">
+              <div><h4>Redis</h4><p>Holds the task queue, task records, duplicate-event keys, skill data, and human-approval checkpoints.</p></div>
+              <div><h4>Skills API</h4><p>Publishes and retrieves the small recovery procedure that guides agent planning.</p></div>
+              <div><h4>Registry</h4><p>Stores plans, tool results, skill activation, LLM interactions, and checkpoint snapshots.</p></div>
+              <div><h4>Jaeger and logs</h4><p>Show which services communicated, which HTTP calls failed, and what each workload recorded.</p></div>
+            </div>
+          </article>
+        </div>
+
+        <section id="commerce-core-explained" class="core-explainer" aria-labelledby="commerce-core-title">
+          <div class="core-explainer-heading">
+            <p class="mini-label">Commerce Core under the hood</p>
+            <h3 id="commerce-core-title">A rules calculator, safety gate, and transaction owner—not a second AI</h3>
+            <p>
+              Commerce Core is ordinary deterministic software written in Go.
+              It accepts strict JSON, reads current business state, checks proof,
+              and follows explicit <em>if/then</em> rules. It cannot understand a
+              customer sentence, search policy prose, or invent a new rule.
+            </p>
+          </div>
+
+          <div class="core-role-grid">
+            <article>
+              <span class="core-role-number">1</span>
+              <h4>Rules calculator</h4>
+              <p>Compares verified order facts with option-specific eligibility rules and monetary thresholds.</p>
+            </article>
+            <article>
+              <span class="core-role-number">2</span>
+              <h4>Safety gate</h4>
+              <p>Rejects missing, conflicting, expired, out-of-scope, stale, or unapproved decision evidence.</p>
+            </article>
+            <article>
+              <span class="core-role-number">3</span>
+              <h4>Transaction owner</h4>
+              <p>Is the only demo service allowed to change an order, and protects that change from duplicates.</p>
+            </article>
+          </div>
+
+          <h4 class="core-subheading">What happens inside <code>evaluate_recovery_policy</code></h4>
+          <ol class="core-decision-pipeline" aria-label="Six deterministic stages inside Commerce Core policy evaluation">
+            <li>
+              <span>1</span>
+              <div><strong>Receive a strict case</strong><p>Order ID, one option ID, release ID and hash, decision time, exact section IDs, and signed receipts.</p></div>
+            </li>
+            <li>
+              <span>2</span>
+              <div><strong>Read current truth</strong><p>Commerce Core loads the order itself. It does not trust an order snapshot written or remembered by the language model.</p></div>
+            </li>
+            <li>
+              <span>3</span>
+              <div><strong>Validate the proof</strong><p>The release must be active. Every section must be known, and every receipt must be valid for the same tenant, place, channel, date, and decision time.</p></div>
+            </li>
+            <li>
+              <span>4</span>
+              <div><strong>Run fixed business rules</strong><p>Go code checks the selected option against order facts and required section IDs. It does not ask an LLM to interpret the section text.</p></div>
+            </li>
+            <li>
+              <span>5</span>
+              <div><strong>Classify the decision</strong><p>The result is allowed, approval required, denied, insufficient evidence, or conflicting evidence.</p></div>
+            </li>
+            <li>
+              <span>6</span>
+              <div><strong>Store a short-lived basis</strong><p>A 15-minute decision token binds the option to the order version, policy release, evidence, and time. Evaluation does not change the order.</p></div>
+            </li>
+          </ol>
+
+          <div class="core-outcome-logic">
+            <h4>How the five outcomes are selected</h4>
+            <div class="core-outcome-row"><code>insufficient_evidence</code><span>A decisive section, required receipt, or carrier fact explicitly treated as evidence is missing.</span></div>
+            <div class="core-outcome-row"><code>conflicting_evidence</code><span>Two equally applicable rules disagree and no reviewed precedence rule resolves them.</span></div>
+            <div class="core-outcome-row"><code>denied</code><span>The evidence is available, but current order facts fail the fixed eligibility rule.</span></div>
+            <div class="core-outcome-row"><code>approval_required</code><span>The action is eligible, but a configured value or restriction threshold requires a person.</span></div>
+            <div class="core-outcome-row"><code>allowed</code><span>The action is eligible, evidence is sufficient, and no approval threshold is crossed.</span></div>
+          </div>
+
+          <div class="core-ai-comparison">
+            <article class="core-ai-side">
+              <p class="mini-label">Adaptive AI agent</p>
+              <h4>Handles an open investigation</h4>
+              <ul>
+                <li>Understands flexible human language.</li>
+                <li>Chooses search wording and useful read calls.</li>
+                <li>Connects order facts with candidate evidence.</li>
+                <li>Can produce a different plan when context changes.</li>
+                <li>Can propose an option, but cannot authorize it.</li>
+              </ul>
+            </article>
+            <div class="core-comparison-rule" aria-hidden="true">
+              <span>proposal</span><strong>→</strong><span>decision</span>
+            </div>
+            <article class="core-code-side">
+              <p class="mini-label">Deterministic Commerce Core</p>
+              <h4>Answers a closed business question</h4>
+              <ul>
+                <li>Accepts only a defined JSON structure.</li>
+                <li>Reads authoritative state from its own store.</li>
+                <li>Uses reviewed section IDs and fixed Go rules.</li>
+                <li>Returns the same outcome for the same valid state and inputs.</li>
+                <li>Can authorize and execute only predefined options.</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="core-policy-truth">
+            <h4>What the policy corpus does—and does not do</h4>
+            <p>
+              The Knowledge Gateway gives the agent exact policy text for
+              investigation and gives Commerce Core signed proof that specific
+              sections were read. Commerce Core recognises the stable section
+              IDs used by its decision table. It does <strong>not</strong>
+              translate a new paragraph into executable logic by itself.
+              Adding a document to the corpus can improve retrieval, but it does
+              not automatically add a new business rule.
+            </p>
+          </div>
+
+          <div class="core-worked-example">
+            <div>
+              <p class="mini-label">Worked example · ORD-1003</p>
+              <h4>Why the replacement is allowed automatically</h4>
+              <ul>
+                <li>Order is <code>missing_in_transit</code>.</li>
+                <li>Replacement inventory is available.</li>
+                <li>Fraud risk is low and the item is not restricted.</li>
+                <li>The replacement-authority section has a valid receipt.</li>
+                <li>Order value is <strong>$69</strong>; automatic replacement limit is <strong>$75</strong>.</li>
+              </ul>
+            </div>
+            <div class="core-equation" aria-label="For order ORD-1003, valid authority plus satisfied facts plus value below the threshold produces an allowed result">
+              <span>Valid authority</span><b>+</b><span>Facts pass</span><b>+</b><span>$69 ≤ $75</span><b>=</b><strong>allowed</strong>
+            </div>
+            <p class="core-example-note">
+              If the same eligible replacement were worth $249, the result
+              would be <code>approval_required</code> when threshold evidence is
+              present. Without that threshold evidence, it would be
+              <code>insufficient_evidence</code>.
+            </p>
+          </div>
+
+          <div class="core-reality-note">
+            <strong>How this maps to a real company:</strong>
+            <span>A production organisation may split these duties across an order-management system, policy service, payment service, inventory service, approval workflow, and audit ledger. This laptop demo combines them in one small service so the control boundary is easy to see. The control pattern is reusable across domains, but this Go decision table and these order mutations are commerce-specific.</span>
+          </div>
+        </section>
+
+        <section id="knowledge-gateway-explained" class="gateway-explainer" aria-labelledby="knowledge-gateway-title">
+          <div class="gateway-explainer-heading">
+            <p class="mini-label">Domain Knowledge Gateway under the hood</p>
+            <h3 id="knowledge-gateway-title">A controlled policy library, search pipeline, graph navigator, and evidence notary—not a policy brain</h3>
+            <p>
+              The gateway helps the agent find a small, relevant set of policy
+              sections without putting the whole corpus into an LLM prompt. It
+              applies repeatable retrieval rules and proves exact reads. It does
+              not decide whether a refund, replacement, or other business action
+              is allowed.
+            </p>
+          </div>
+
+          <div class="gateway-role-grid">
+            <article>
+              <span class="gateway-role-number">1</span>
+              <h4>Release keeper</h4>
+              <p>Loads one versioned domain pack and exposes its release ID, validity, source count, section count, and hash.</p>
+            </article>
+            <article>
+              <span class="gateway-role-number">2</span>
+              <h4>Scoped retriever</h4>
+              <p>Filters out inapplicable sections before combining two deterministic relevance rankings.</p>
+            </article>
+            <article>
+              <span class="gateway-role-number">3</span>
+              <h4>Graph navigator</h4>
+              <p>Follows authored links such as <code>REQUIRES</code>, <code>OVERRIDES</code>, and <code>CONFLICTS_WITH</code>.</p>
+            </article>
+            <article>
+              <span class="gateway-role-number">4</span>
+              <h4>Evidence notary</h4>
+              <p>Returns an exact in-scope section and a signed, 30-minute receipt that Commerce Core can verify.</p>
+            </article>
+          </div>
+
+          <div class="gateway-origin">
+            <p class="mini-label">Before the service starts</p>
+            <h4>Where the knowledge comes from</h4>
+            <div class="pack-lifecycle" role="img" aria-label="Public and internal documents are curated offline into a versioned pack JSON file. The gateway validates and hashes that pack, then creates an in-memory retrieval view and a LadybugDB graph projection.">
+              <div><span>Source material</span><strong>Public rules + internal policy</strong><small>URLs and retrieval dates retained</small></div>
+              <b aria-hidden="true">→</b>
+              <div><span>Offline preparation</span><strong>Human-curated normalization</strong><small>Sections, facts, tags, aliases, links, tests</small></div>
+              <b aria-hidden="true">→</b>
+              <div><span>Canonical source</span><strong>One immutable <code>pack.json</code></strong><small>Strict schema + declared release</small></div>
+              <b aria-hidden="true">→</b>
+              <div><span>Gateway startup</span><strong>Validate, hash, and project</strong><small>Memory retrieval view + Ladybug graph</small></div>
+            </div>
+            <p class="gateway-honesty-note">
+              The running gateway does not crawl those URLs, download new
+              documents, perform OCR, or ask an LLM to create sections. The
+              bundled pack was prepared before deployment. Its URLs are
+              provenance links, not a live ingestion feed.
+            </p>
+          </div>
+
+          <div class="pack-contents">
+            <h4>What one domain pack contains</h4>
+            <dl>
+              <div><dt>Release</dt><dd>ID, publication and validity dates, domain, tenant, and SHA-256 content hash.</dd></div>
+              <div><dt>Sources</dt><dd>Publisher, title, URL, retrieval time, extraction method, and licence note.</dd></div>
+              <div><dt>Sections</dt><dd>Stable ID, normalized text, source, scope, dates, priority, tags, and optional structured facts.</dd></div>
+              <div><dt>Aliases</dt><dd>Reviewed vocabulary such as <code>reship → replacement</code> and <code>late → delay</code>.</dd></div>
+              <div><dt>Relations</dt><dd>Directed links between known section IDs. The gateway never invents graph edges at query time.</dd></div>
+              <div><dt>Golden cases</dt><dd>Example searches with expected and forbidden sections for retrieval evaluation.</dd></div>
+            </dl>
+          </div>
+
+          <div class="gateway-search-explained">
+            <p class="mini-label">Inside <code>search_evidence</code></p>
+            <h4>How a question becomes a ranked candidate list</h4>
+            <ol class="gateway-search-pipeline">
+              <li>
+                <span>1</span>
+                <div><strong>Validate the request</strong><p>Require a query, tenant, jurisdiction, channel, and decision time. Optionally accept a release, controlled tags, and a result limit.</p></div>
+              </li>
+              <li>
+                <span>2</span>
+                <div><strong>Apply hard scope first</strong><p>Keep only the active release, matching tenant, applicable place and channel, effective date, and optional OR-matched tags.</p></div>
+              </li>
+              <li>
+                <span>3</span>
+                <div><strong>Run two rankings</strong><p>Rank the same filtered sections once by word relevance and once by deterministic alias-aware similarity.</p></div>
+              </li>
+              <li>
+                <span>4</span>
+                <div><strong>Fuse the rankings</strong><p>Reciprocal-rank fusion rewards sections that rank well in either list. Named-source queries suppress unrelated peer sources.</p></div>
+              </li>
+              <li>
+                <span>5</span>
+                <div><strong>Return a small result</strong><p>Return at most the requested limit—eight by default—plus up to twenty one-hop relation paths from ranked sections.</p></div>
+              </li>
+            </ol>
+
+            <div class="ranking-lanes" aria-label="The lexical and deterministic semantic rankings run over the same scoped sections and are combined by reciprocal-rank fusion">
+              <article class="lexical-lane">
+                <p class="mini-label">Ranking lane A</p>
+                <h5>BM25-style word relevance</h5>
+                <ul>
+                  <li>Lowercases and tokenizes title, text, and tags.</li>
+                  <li>Removes common words and applies a small stemmer.</li>
+                  <li>Rewards useful rare terms and repeated matches.</li>
+                  <li>Boosts a section using its reviewed priority.</li>
+                </ul>
+              </article>
+              <div class="ranking-merge"><span>ranked list</span><strong>＋</strong><span>ranked list</span><b>↓</b><em>RRF</em></div>
+              <article class="semantic-lane">
+                <p class="mini-label">Ranking lane B</p>
+                <h5>Deterministic alias-aware similarity</h5>
+                <ul>
+                  <li>Normalizes reviewed aliases from the active pack.</li>
+                  <li>Hashes words and neighbouring word pairs into 128 numeric buckets.</li>
+                  <li>Uses cosine similarity between query and section vectors.</li>
+                  <li>Uses no embedding API, learned model, or vector database.</li>
+                </ul>
+              </article>
+            </div>
+
+            <div class="semantic-plain-note">
+              <strong>What “semantic” means in this demo:</strong>
+              <span>It can connect reviewed vocabulary such as “reship” and “replacement.” It cannot discover every unseen synonym or understand policy like a person. A missing alias can produce a missed result.</span>
+            </div>
+          </div>
+
+          <div class="candidate-evidence-split">
+            <article>
+              <p class="mini-label">Search output</p>
+              <h4>Candidate—not yet evidence</h4>
+              <p>
+                A search candidate includes the normalized section content,
+                stable ID, source metadata, score, retrieval method, and matched
+                terms. In this demo the content is already visible, but there is
+                no signed receipt. A high score means “inspect this,” not “this
+                action is authorized.”
+              </p>
+            </article>
+            <div class="candidate-arrow" aria-hidden="true"><span>exact read</span><strong>→</strong><span>proof</span></div>
+            <article>
+              <p class="mini-label">Exact-read output</p>
+              <h4>Verified evidence package</h4>
+              <p>
+                <code>read_exact_section</code> checks the release, tenant,
+                jurisdiction, channel, and effective date again. It returns the
+                exact section and source plus a signed receipt scoped to that
+                read.
+              </p>
+            </article>
+          </div>
+
+          <div class="receipt-explainer">
+            <div>
+              <p class="mini-label">Evidence receipt</p>
+              <h4>What the 30-minute proof contains</h4>
+              <ul>
+                <li>Section ID</li><li>Release ID and release hash</li>
+                <li>Tenant, jurisdiction, and channel</li><li>Decision time</li>
+                <li>Issue time and expiry time</li><li>Version and HMAC signature</li>
+              </ul>
+            </div>
+            <div class="receipt-token" aria-label="The evidence receipt consists of a readable encoded claims payload and a tamper-evident HMAC signature">
+              <span>Readable encoded claims</span><b>.</b><span>Tamper-evident HMAC</span>
+            </div>
+            <p>
+              The receipt is signed, not encrypted. Its purpose is proof, not
+              secrecy. If a caller changes a section, scope, release, or time,
+              the signature no longer matches. The receipt proves an exact read;
+              it does not say that a business action is allowed.
+            </p>
+          </div>
+
+          <div class="ladybug-truth">
+            <div class="ladybug-heading">
+              <p class="mini-label">LadybugDB's exact role</p>
+              <h4>A disposable graph projection inside the same gateway pod</h4>
+              <p><code>pack.json</code> remains the canonical source. The projection can be rebuilt whenever the service starts.</p>
+            </div>
+            <div class="ladybug-columns">
+              <article>
+                <h5>LadybugDB does</h5>
+                <ul>
+                  <li>Store one node for each normalized section.</li>
+                  <li>Store typed links between section nodes.</li>
+                  <li>Confirm an exact-read section node exists.</li>
+                  <li>Confirm relation paths against graph edges.</li>
+                </ul>
+              </article>
+              <article>
+                <h5>LadybugDB does not currently do</h5>
+                <ul>
+                  <li>Load or crawl source documents.</li>
+                  <li>Run the BM25-style or alias-vector ranking.</li>
+                  <li>Call an embedding model or LLM.</li>
+                  <li>Run as a separate pod or network service.</li>
+                </ul>
+              </article>
+            </div>
+            <p class="ladybug-adapter-note">
+              The in-memory reference store performs filtering and ranking. The
+              Ladybug adapter verifies graph existence and traversal. Both sit
+              behind the private <code>KnowledgeStore</code> interface, so a
+              future Neo4j or search-service adapter can keep the public gateway
+              capabilities unchanged.
+            </p>
+          </div>
+
+          <div class="gateway-ai-comparison">
+            <article class="gateway-agent-side">
+              <p class="mini-label">Adaptive AI agent</p>
+              <h4>Chooses what to investigate</h4>
+              <ul>
+                <li>Forms a natural-language evidence question.</li>
+                <li>Selects useful candidates and relations to inspect.</li>
+                <li>Requests exact reads for decisive sections.</li>
+                <li>Can explain the returned policy text.</li>
+              </ul>
+            </article>
+            <div class="gateway-comparison-rule" aria-hidden="true"><span>query</span><strong>→</strong><span>bounded results</span></div>
+            <article class="gateway-service-side">
+              <p class="mini-label">Deterministic gateway</p>
+              <h4>Controls how knowledge is retrieved</h4>
+              <ul>
+                <li>Enforces scope and release boundaries.</li>
+                <li>Ranks with fixed, inspectable algorithms.</li>
+                <li>Follows only relationships already in the pack.</li>
+                <li>Proves exact reads but never authorizes an action.</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="gateway-worked-example">
+            <p class="mini-label">Worked example · ORD-1003 investigation</p>
+            <h4>How replacement evidence reaches the agent</h4>
+            <ol>
+              <li><strong>Question:</strong> Find authority, limits, approval, and precedence for a missing-order same-SKU replacement.</li>
+              <li><strong>Scope:</strong> <code>commerce-demo</code>, US, online, release <code>commerce-us-2026-08-20</code>, decision time 2026-08-20 18:00 UTC.</li>
+              <li><strong>Search:</strong> In-scope sections are ranked by the two deterministic lanes and connected one-hop relations are returned.</li>
+              <li><strong>Selection:</strong> The agent chooses <code>demo-auto-recovery-bounds</code>, <code>demo-approval-thresholds</code>, and <code>demo-evidence-precedence</code>.</li>
+              <li><strong>Exact reads:</strong> The gateway returns each section with its source and a separate signed receipt.</li>
+              <li><strong>Handoff:</strong> The agent sends those IDs and receipts to Commerce Core. The gateway itself never returns <code>allowed</code>.</li>
+            </ol>
+          </div>
+
+          <div class="gateway-reality-note">
+            <strong>What scales and what changes:</strong>
+            <span>The four public capabilities and domain-pack shape are reusable across domains. Each domain supplies its own sources, normalized sections, aliases, tags, relations, and golden cases. For a much larger corpus, the same API can sit in front of a production search and graph adapter; this demo's in-memory ranking and embedded projection are deliberately laptop-sized.</span>
+          </div>
+        </section>
+      </section>
+
+      <section id="tools" class="chapter">
+        <p class="chapter-number">Chapter 6</p>
+        <h2>What the tools and capabilities do</h2>
+        <p class="lead">
+          A <strong>tool service</strong> is a normal web service. A
+          <strong>capability</strong> is one named operation exposed by that
+          service. The agent discovers these operations and calls them with JSON.
+        </p>
+
+        <div class="call-example" aria-label="The Order Operations Agent sends a get_order_context request to Commerce Core. Commerce Core reads the order without using AI or changing data, and returns structured order facts to the agent.">
+          <article class="call-party agent-party">
+            <p class="call-party-type">Caller · coordinates with AI</p>
+            <h3>Order Operations Agent</h3>
+            <div class="call-intent">
+              <span>Intent</span>
+              <strong>“Read order ORD-1003”</strong>
+            </div>
+            <div class="call-receives">
+              <span>Receives</span>
+              <p>Status, value, carrier, inventory, restrictions, and order version.</p>
+            </div>
+          </article>
+
+          <div class="call-exchange">
+            <div class="call-lane request-lane">
+              <span class="lane-label">Request</span>
+              <strong>POST JSON <span class="request-direction" aria-hidden="true"></span></strong>
+              <code>capability: get_order_context</code>
+              <code>order_id: ORD-1003</code>
+            </div>
+            <div class="call-lane response-lane">
+              <span class="lane-label">Response</span>
+              <strong><span class="response-direction" aria-hidden="true"></span> JSON result</strong>
+              <span>Structured current order facts</span>
+            </div>
+          </div>
+
+          <article class="call-party tool-party">
+            <p class="call-party-type">Tool service · no AI</p>
+            <h3>Commerce Core</h3>
+            <p>Runs <code>get_order_context</code> and reads the current order record.</p>
+            <ul>
+              <li>Validates the order ID.</li>
+              <li>Returns current business facts.</li>
+              <li>Does not change any data.</li>
+            </ul>
+          </article>
+        </div>
+
+        <h3 class="tool-group-title">Commerce Core: six public capabilities</h3>
+        <div class="capability-list">
+          <details class="capability" open>
+            <summary><code>get_order_context</code><span>Read current order truth</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> The agent must not invent order facts.</p>
+              <p><strong>Input:</strong> <code>order_id</code>.</p>
+              <p><strong>What it does:</strong> Reads the order from Commerce Core. Returns payment, fulfillment, carrier, value, inventory, risk, restrictions, tenant, jurisdiction, channel, and version.</p>
+              <p><strong>Changes data?</strong> No. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+
+          <details class="capability">
+            <summary><code>list_fulfillment_options</code><span>List permitted action choices</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> The model may choose only from actions that the business service exposes.</p>
+              <p><strong>Input:</strong> <code>order_id</code>.</p>
+              <p><strong>What it does:</strong> Uses current order state to return possible option IDs such as wait, cancel and refund, merchandise refund, same-SKU replacement, or carrier claim. It also states each option's preconditions and evidence channel.</p>
+              <p><strong>Changes data?</strong> No. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+
+          <details class="capability important-capability">
+            <summary><code>evaluate_recovery_policy</code><span>Make the authoritative policy decision</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> An LLM must not decide whether a business action is authorized.</p>
+              <p><strong>Input:</strong> Order ID, one option ID, release ID and hash, decision time, exact section IDs, and one signed receipt for every section.</p>
+              <ol>
+                <li>Reads the current order from Commerce Core.</li>
+                <li>Checks that the supplied policy release is active.</li>
+                <li>Verifies every evidence receipt, scope, date, and section.</li>
+                <li>Applies fixed Go rules for the selected option.</li>
+                <li>Applies refund or replacement approval thresholds.</li>
+                <li>Returns one outcome and a short-lived decision token. Only an eligible decision can execute.</li>
+              </ol>
+              <p><strong>Possible outcomes:</strong> <code>allowed</code>, <code>approval_required</code>, <code>denied</code>, <code>insufficient_evidence</code>, or <code>conflicting_evidence</code>.</p>
+              <p><strong>Changes data?</strong> It stores a short-lived decision, but does not change the order. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+
+          <details class="capability important-capability">
+            <summary><code>execute_recovery_command</code><span>Apply one guarded business change</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> A decision must be checked again at the last possible moment.</p>
+              <p><strong>Input:</strong> Decision token, duplicate-protection (idempotency) key, and—when required—checkpoint reference and runtime-generated approval proof.</p>
+              <ol>
+                <li>Returns the original result if the same idempotency key already completed.</li>
+                <li>Checks that the decision was eligible.</li>
+                <li>Checks the active policy release.</li>
+                <li>Checks human approval for approval-class decisions.</li>
+                <li>Checks the current order version and decision expiry.</li>
+                <li>Revalidates evidence and recalculates the policy outcome.</li>
+                <li>Applies the option-specific mutation and increases the order version.</li>
+              </ol>
+              <p><strong>Changes data?</strong> Yes. This is the only public mutation capability. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+
+          <details class="capability">
+            <summary><code>verify_order_outcome</code><span>Check the business result</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> HTTP success does not prove that the expected order state exists.</p>
+              <p><strong>Input:</strong> Order ID and command ID.</p>
+              <p><strong>What it does:</strong> Reads the order and checks action-specific fulfillment, payment, carrier-claim, command, and recovery postconditions.</p>
+              <p><strong>Output:</strong> <code>verified=true</code> only when the expected state is present.</p>
+              <p><strong>Changes data?</strong> No. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+
+          <details class="capability">
+            <summary><code>send_synthetic_notification</code><span>Record communication after verification</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> Customer communication must not claim success before the business result is verified.</p>
+              <p><strong>Input:</strong> Order ID, command ID, channel, and a customer-safe message.</p>
+              <p><strong>What it does:</strong> Confirms the command postconditions and stores a local notification record. It does not send a real email or message.</p>
+              <p><strong>Changes data?</strong> Adds a synthetic audit record. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+        </div>
+
+        <h3 class="tool-group-title">Knowledge Gateway: four public capabilities</h3>
+        <div class="capability-list">
+          <details class="capability">
+            <summary><code>get_release_info</code><span>Identify the active policy release</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> Every decision must identify the exact policy snapshot it used.</p>
+              <p><strong>Input:</strong> Optional release ID; otherwise use the active release.</p>
+              <p><strong>Output:</strong> Release ID, content hash, domain, tenant, validity dates, source count, and section count.</p>
+              <p><strong>Changes data?</strong> No. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+
+          <details class="capability important-capability">
+            <summary><code>search_evidence</code><span>Find relevant policy sections</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> The corpus can be much larger than an agent prompt or skill.</p>
+              <p><strong>Input:</strong> Natural-language query, tenant, jurisdiction, channel, decision time, optional release and tags, and a result limit.</p>
+              <ol>
+                <li>Filters by tenant, release, jurisdiction, channel, and effective date.</li>
+                <li>Ranks the remaining sections using BM25-style word relevance.</li>
+                <li>Also ranks them using alias-aware hashed vectors and cosine similarity.</li>
+                <li>Combines the two lists using reciprocal-rank fusion.</li>
+              </ol>
+              <p><strong>Output:</strong> Ranked candidate objects with normalized section content, IDs, source metadata, scores, retrieval methods, matched terms, optional relation paths, and warnings.</p>
+              <p><strong>Important:</strong> Search candidates are not yet authorization evidence. The agent must read decisive sections exactly.</p>
+              <p><strong>Changes data?</strong> No. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+
+          <details class="capability">
+            <summary><code>traverse_relations</code><span>Follow explicit policy links</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> A useful answer may depend on an exception, prerequisite, authority, conflict, or procedure connected to the first section.</p>
+              <p><strong>Input:</strong> Starting section IDs, scope, decision time, optional relation types, maximum depth, and result limit.</p>
+              <p><strong>What it does:</strong> Follows typed graph relationships. The agent's plan guard fixes the demo to one hop and at most twenty paths.</p>
+              <p><strong>Output:</strong> Paths containing source section, relation type, target section, and depth.</p>
+              <p><strong>Changes data?</strong> No. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+
+          <details class="capability important-capability">
+            <summary><code>read_exact_section</code><span>Read and prove one decisive section</span></summary>
+            <div class="capability-body">
+              <p><strong>Why it exists:</strong> A ranked search candidate—even one containing section text—is not a safe decision basis without scoped proof.</p>
+              <p><strong>Input:</strong> Exact section ID, tenant, jurisdiction, channel, decision time, and optional release ID.</p>
+              <p><strong>What it does:</strong> Checks scope and effective dates, returns the normalized section and source, and signs a receipt bound to that exact read.</p>
+              <p><strong>Receipt lifetime:</strong> Thirty minutes in this demo.</p>
+              <p><strong>Changes data?</strong> No business change. <strong>Uses AI?</strong> No.</p>
+            </div>
+          </details>
+        </div>
+
+        <div class="retrieval-explainer">
+          <div class="retrieval-copy">
+            <p class="mini-label">How a large corpus is reduced safely</p>
+            <h3>This is more than a simple word search</h3>
+            <p>
+              The gateway removes out-of-scope sections first. It then combines
+              exact word matches with curated meaning aliases, follows declared
+              policy relationships, and returns a small candidate list. The
+              agent must still read every decisive section exactly. Finally,
+              Commerce Core—not search—decides whether action is authorized.
+            </p>
+          </div>
+          <ol class="retrieval-funnel" aria-label="Five stages reduce a large policy corpus to a verified deterministic decision">
+            <li><span>Large corpus</span><strong>Many documents and sections</strong></li>
+            <li><span>Scope filter</span><strong>Right tenant, place, channel, date, and release</strong></li>
+            <li><span>Hybrid rank</span><strong>Word matches plus curated meaning aliases</strong></li>
+            <li><span>Exact evidence</span><strong>Full sections, sources, hashes, and signed receipts</strong></li>
+            <li><span>Policy code</span><strong>One governed decision</strong></li>
+          </ol>
+          <div class="corpus-reality">
+            <article>
+              <h4>What this demo contains</h4>
+              <p>
+                The commerce pack is about 26 KB: seven sources and eighteen
+                normalized sections. Its source records include FTC, eCFR,
+                USPS, FedEx, Target, and Walmart public material, plus one
+                synthetic internal recovery standard. The included text is a
+                curated demo snapshot; it is not a live legal feed.
+              </p>
+            </article>
+            <article>
+              <h4>What “2–10 MB” means</h4>
+              <p>
+                It was an early local-demo sizing guide, not a real-world upper
+                limit. A production corpus can be far larger. The gateway API
+                can stay the same while its storage adapter moves from embedded
+                LadybugDB to a larger graph or search service.
+              </p>
+            </article>
+            <article>
+              <h4>What “semantic” means here</h4>
+              <p>
+                This local version does not call an embedding model. Domain-pack
+                authors provide deterministic aliases that connect related
+                wording. This makes tests repeatable, but it is not a general
+                vector search system.
+              </p>
+            </article>
+          </div>
+        </div>
+
+        <div class="internal-controls">
+          <h3>Hidden controls used only by the demo</h3>
+          <p>
+            The setup script and paired tests need controlled ways to reset
+            state, prove the normal no-AI path, simulate a state change, and
+            switch domain packs. These capabilities are marked internal, so the
+            agent cannot discover or choose them.
+          </p>
+          <ul>
+            <li><code>process_normal_order</code> — checks a healthy order without an agent or LLM.</li>
+            <li><code>manage_demo_state</code> — resets or deliberately changes synthetic Commerce state.</li>
+            <li><code>manage_demo_domain_pack</code> — activates an allow-listed bundled domain pack.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="workflow" class="chapter">
+        <p class="chapter-number">Chapter 7</p>
+        <h2>Follow the workflow from event to verified result</h2>
+        <p class="lead">
+          Use the Previous and Next buttons, or select any numbered step. The
+          selected step shows which component acts, what data enters, and what
+          result leaves.
+        </p>
+
+        <div class="workflow-explorer">
+          <ol id="workflow-steps" class="workflow-steps" aria-label="Workflow steps">
+            <li><button class="workflow-step" type="button" data-workflow-step="0" aria-pressed="true"><span>1</span>Submit</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="1" aria-pressed="false"><span>2</span>Queue</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="2" aria-pressed="false"><span>3</span>Guide</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="3" aria-pressed="false"><span>4</span>State</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="4" aria-pressed="false"><span>5</span>Search</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="5" aria-pressed="false"><span>6</span>Exact read</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="6" aria-pressed="false"><span>7</span>Decide</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="7" aria-pressed="false"><span>8</span>Approve?</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="8" aria-pressed="false"><span>9</span>Execute</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="9" aria-pressed="false"><span>10</span>Verify</button></li>
+            <li><button class="workflow-step" type="button" data-workflow-step="10" aria-pressed="false"><span>11</span>Record</button></li>
+          </ol>
+
+          <div id="workflow-detail" class="workflow-detail" aria-live="polite">
+            <div class="workflow-detail-header">
+              <span id="workflow-actor" class="actor-badge">Caller → Agent webhook</span>
+              <span id="workflow-count">Step 1 of 11</span>
+            </div>
+            <h3 id="workflow-title">Submit an order-risk event</h3>
+            <p id="workflow-explanation">A caller sends a small JSON event with a unique event ID, order ID, risk signal, requested option, and decision time.</p>
+            <dl class="workflow-io">
+              <div><dt>Input</dt><dd id="workflow-input">Order-risk JSON</dd></div>
+              <div><dt>Output</dt><dd id="workflow-output">HTTP 202, task ID, and status URL</dd></div>
+              <div><dt>Why it matters</dt><dd id="workflow-why">The caller does not need to keep a connection open while the investigation runs.</dd></div>
+            </dl>
+          </div>
+
+          <div class="workflow-controls">
+            <button id="workflow-previous" class="button secondary" type="button" disabled>Previous step</button>
+            <button id="workflow-next" class="button primary" type="button">Next step</button>
+          </div>
+        </div>
+
+        <noscript>
+          <p class="plain-note">JavaScript is disabled. The complete static workflow is available in <a href="03-evidence-to-action.md">Part 3 of the Markdown tutorial</a>.</p>
+        </noscript>
+
+        <h3 class="section-heading">The decision creates a fixed branch</h3>
+        <div class="outcome-grid">
+          <article class="outcome allowed"><h4>Allowed</h4><p>Execute automatically, then verify and notify.</p></article>
+          <article class="outcome approval"><h4>Approval required</h4><p>Pause before execution. Continue only after a valid human decision.</p></article>
+          <article class="outcome denied"><h4>Denied</h4><p>Remove the execution chain. Report the reason. Do not mutate.</p></article>
+          <article class="outcome uncertain"><h4>Insufficient or conflicting evidence</h4><p>Stop safely. Report the exact uncertainty. Do not guess.</p></article>
+        </div>
+      </section>
+
+      <section id="scenarios" class="chapter">
+        <p class="chapter-number">Chapter 8</p>
+        <h2>Explore the scenarios</h2>
+        <p class="lead">
+          Each scenario changes one important fact. Select a scenario to see the
+          business story, expected system behaviour, and captured live evidence.
+        </p>
+
+        <div class="scenario-explorer">
+        <div id="scenario-controls" class="scenario-controls" role="group" aria-label="Choose a scenario">
+          <button type="button" data-scenario="normal" aria-pressed="true">Normal order</button>
+          <button type="button" data-scenario="automatic" aria-pressed="false">Automatic recovery</button>
+          <button type="button" data-scenario="approval" aria-pressed="false">Approval</button>
+          <button type="button" data-scenario="denied" aria-pressed="false">Denied</button>
+          <button type="button" data-scenario="insufficient" aria-pressed="false">Missing evidence</button>
+          <button type="button" data-scenario="conflict" aria-pressed="false">Conflicting evidence</button>
+          <button type="button" data-scenario="duplicate" aria-pressed="false">Duplicate event</button>
+          <button type="button" data-scenario="state-change" aria-pressed="false">State changed</button>
+          <button type="button" data-scenario="policy-change" aria-pressed="false">Policy changed</button>
+          <button type="button" data-scenario="reapproval" aria-pressed="false">Fresh reapproval</button>
+          <button type="button" data-scenario="other-domain" aria-pressed="false">IT domain</button>
+        </div>
+
+        <article id="scenario-detail" class="scenario-detail" aria-live="polite">
+          <div class="scenario-topline">
+            <span id="scenario-level">Start here</span>
+            <span id="scenario-mutation" class="mutation-badge no">No mutation needed</span>
+          </div>
+          <h3 id="scenario-title">A healthy order stays on the normal path</h3>
+          <p id="scenario-story">ORD-1000 is confirmed, paid, and already has reserved inventory.</p>
+          <div class="scenario-grid">
+            <div><h4>System behaviour</h4><p id="scenario-behaviour">The setup driver calls the deterministic normal-order capability directly. The agent and LLM are not invoked.</p></div>
+            <div><h4>Expected result</h4><p id="scenario-result"><code>normal_order_confirmed</code></p></div>
+            <div><h4>What this teaches</h4><p id="scenario-learning">AI should not be added to a business path that already has a clear deterministic answer.</p></div>
+            <div><h4>Captured evidence</h4><p id="scenario-evidence">Direct result for ORD-1000: <code>agent_invoked=false</code>, <code>llm_invoked=false</code>.</p></div>
+          </div>
+        </article>
+        </div>
+      </section>
+
+      <section id="live-run" class="chapter">
+        <p class="chapter-number">Chapter 9</p>
+        <h2>A real automatic-recovery run</h2>
+        <p class="lead">
+          This section uses one execution captured from the local Kind cluster.
+          Sensitive receipts and tokens are not copied here.
+        </p>
+
+        <div class="evidence-identifiers">
+          <div><span>Task</span><code>order-event-demo-automatic-recovery-1787446133-56209</code></div>
+          <div><span>Registry request</span><code>order-operations-1787446133236523689</code></div>
+          <div><span>Jaeger trace</span><code>f3952cb932773e34bedaff89cd2df4b5</code></div>
+        </div>
+
+        <h3 class="section-heading">How it was triggered</h3>
+        <div class="trigger-flow">
+          <div><strong>1</strong><span><code>./setup.sh demo</code></span></div>
+          <span aria-hidden="true">→</span>
+          <div><strong>2</strong><span>Script resets synthetic state</span></div>
+          <span aria-hidden="true">→</span>
+          <div><strong>3</strong><span>Script adds a unique event ID</span></div>
+          <span aria-hidden="true">→</span>
+          <div><strong>4</strong><span>HTTP POST to the agent webhook</span></div>
+          <span aria-hidden="true">→</span>
+          <div><strong>5</strong><span>Script polls the task result</span></div>
+        </div>
+
+        <div class="code-pair">
+          <div>
+            <h4>Submitted event</h4>
+            <pre><code>{
+  "order_id": "ORD-1003",
+  "signal": "package is missing in transit",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z"
+}</code></pre>
+          </div>
+          <div>
+            <h4>Final business result</h4>
+            <pre><code>{
+  "terminal_outcome": "recovered",
+  "policy_outcome": "allowed",
+  "order_id": "ORD-1003",
+  "verified": true,
+  "final_order_version": 2
+}</code></pre>
+          </div>
+        </div>
+
+        <h3 class="section-heading">The eleven recorded tool steps</h3>
+        <div class="table-wrap">
+          <table class="execution-table">
+            <thead><tr><th>Step</th><th>Service</th><th>Capability</th><th>What happened</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Commerce Core</td><td><code>get_order_context</code></td><td>Read missing order at version 1, value 69 USD, inventory available, low risk, not restricted.</td></tr>
+              <tr><td>2</td><td>Commerce Core</td><td><code>list_fulfillment_options</code></td><td>Confirmed that same-SKU replacement was a bounded option.</td></tr>
+              <tr><td>3</td><td>Knowledge Gateway</td><td><code>get_release_info</code></td><td>Pinned release <code>commerce-us-2026-08-20</code> and its content hash.</td></tr>
+              <tr><td>4</td><td>Knowledge Gateway</td><td><code>search_evidence</code></td><td>Filtered and ranked replacement authority, limits, approval, and precedence evidence.</td></tr>
+              <tr><td>5</td><td>Knowledge Gateway</td><td><code>read_exact_section</code></td><td>Read <code>demo-auto-recovery-bounds</code> and issued a scoped receipt.</td></tr>
+              <tr><td>6</td><td>Knowledge Gateway</td><td><code>read_exact_section</code></td><td>Read <code>demo-approval-thresholds</code> and issued a scoped receipt.</td></tr>
+              <tr><td>7</td><td>Knowledge Gateway</td><td><code>read_exact_section</code></td><td>Read <code>demo-evidence-precedence</code> and issued a scoped receipt.</td></tr>
+              <tr><td>8</td><td>Commerce Core</td><td><code>evaluate_recovery_policy</code></td><td>Verified evidence and returned <code>allowed</code>; approval was not required.</td></tr>
+              <tr><td>9</td><td>Commerce Core</td><td><code>execute_recovery_command</code></td><td>Revalidated the basis and created the replacement exactly once.</td></tr>
+              <tr><td>10</td><td>Commerce Core</td><td><code>verify_order_outcome</code></td><td>Confirmed version 2 and <code>fulfillment_status=replacement_created</code>.</td></tr>
+              <tr><td>11</td><td>Commerce Core</td><td><code>send_synthetic_notification</code></td><td>Recorded a local notification after verification.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="live-proof-grid">
+          <article><span class="proof-value">8</span><h4>Skill version</h4><p>One activation and five verified content loads.</p></article>
+          <article><span class="proof-value">11</span><h4>Tool steps</h4><p>All required read, decision, command, verification, and notification steps.</p></article>
+          <article><span class="proof-value">126</span><h4>Jaeger spans</h4><p>Across the agent and both tool services.</p></article>
+          <article><span class="proof-value">0</span><h4>Error spans</h4><p>No unexpected error in this successful run.</p></article>
+        </div>
+
+        <div class="result-chain" role="img" aria-label="Order version 1 was evaluated as allowed, changed once, verified at version 2, and then notified">
+          <div><span>Before</span><strong>Order version 1</strong><small>missing_in_transit</small></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Decision</span><strong>allowed</strong><small>approval_required=false</small></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Command</span><strong>completed once</strong><small>replayed=false</small></div>
+          <span aria-hidden="true">→</span>
+          <div><span>After</span><strong>Order version 2</strong><small>replacement_created</small></div>
+        </div>
+      </section>
+
+      <section id="human-approval" class="chapter">
+        <p class="chapter-number">Chapter 10</p>
+        <h2>Human approval and changes during the wait</h2>
+        <p class="lead">
+          A high-value action pauses immediately before execution. The worker is
+          released. The checkpoint is stored in Redis while a person decides.
+        </p>
+
+        <div class="approval-flow" role="img" aria-label="Eligible high-value decision pauses at a checkpoint. Reject and expiry stop. Approval causes fresh validation. Current basis executes; changed basis stops and replans.">
+          <div class="approval-node">Eligible high-value decision</div>
+          <span aria-hidden="true">→</span>
+          <div class="approval-node checkpoint">Persist checkpoint before execute</div>
+          <div class="approval-split">
+            <div><strong>Reject, abort, or expire</strong><span>Finish without command</span></div>
+            <div><strong>Approve</strong><span>Resume and revalidate</span></div>
+          </div>
+          <div class="approval-split second">
+            <div><strong>Policy or order changed</strong><span>HTTP 409 · replan required</span></div>
+            <div><strong>Everything still current</strong><span>Execute, verify, notify</span></div>
+          </div>
+        </div>
+
+        <div class="approval-evidence">
+          <article>
+            <h3>Successful approval</h3>
+            <p>Initial request <code>order-operations-1787431818524531555</code></p>
+            <p>Checkpoint <code>cp-171eded2-66d8-42</code></p>
+            <p>Resume request <code>order-operations-1787431933621096526</code></p>
+            <p><strong>Result:</strong> approved, executed, verified, and notified at order version 2.</p>
+          </article>
+          <article>
+            <h3>Order state changed</h3>
+            <p>Resume request <code>order-operations-1787455319493659830</code></p>
+            <p><strong>Result:</strong> <code>state_changed_during_hitl</code>, HTTP 409, checkpoint aborted, no recovery.</p>
+          </article>
+          <article>
+            <h3>Policy changed</h3>
+            <p>Resume request <code>order-operations-1787455389634165126</code></p>
+            <p><strong>Result:</strong> <code>policy_changed_during_hitl</code>, HTTP 409, checkpoint aborted, no recovery.</p>
+          </article>
+        </div>
+
+        <div class="privacy-note">
+          <h3>The approval proof is not an LLM instruction</h3>
+          <p>
+            The agent runtime creates a proof from the approved checkpoint,
+            decision token, and duplicate-protection identity. Commerce Core verifies it.
+            The raw proof is sent only to the guarded command call. New Registry,
+            checkpoint, LLM debug, trace, and log records redact or omit it.
+          </p>
+        </div>
+      </section>
+
+      <section id="scale" class="chapter">
+        <p class="chapter-number">Chapter 11</p>
+        <h2>Multiple requests, workers, and scale</h2>
+        <p class="lead">
+          A pod is a service instance. A worker is a goroutine inside the agent
+          pod. They are not the same thing.
+        </p>
+
+        <div class="scale-explorer">
+          <div class="scale-controls">
+            <label for="pod-count">Agent pods <output id="pod-count-value">1</output></label>
+            <input id="pod-count" type="range" min="1" max="10" value="1">
+            <label for="worker-count">Workers in each pod <output id="worker-count-value">2</output></label>
+            <input id="worker-count" type="range" min="1" max="20" value="2">
+            <label for="event-count">Events arriving together <output id="event-count-value">100</output></label>
+            <input id="event-count" type="range" min="1" max="200" value="100">
+          </div>
+          <div class="scale-result" aria-live="polite">
+            <div><span id="active-tasks">2</span><strong>active top-level tasks</strong></div>
+            <div><span id="queued-tasks">98</span><strong>tasks waiting in Redis</strong></div>
+            <p id="scale-formula">1 pod × 2 workers = 2 task slots</p>
+          </div>
+        </div>
+
+        <div class="scale-warning">
+          <h3>Important demo limit</h3>
+          <p>
+            The calculator explains the worker model. It does not mean that the
+            complete demo is ready for ten agent pods. Commerce Core currently
+            keeps order state in the memory of one pod. Safe horizontal scaling
+            needs a shared transactional database with order-version and
+            duplicate-protection constraints.
+          </p>
+        </div>
+
+        <div class="chat-commerce-compare">
+          <article><h3>Travel Chat Agent</h3><p>Each normal chat runs directly in a lightweight Go request handler. Its live response connection stays open. There is no application task queue for normal chat.</p></article>
+          <article><h3>Order Operations Agent</h3><p>The webhook returns HTTP 202. Redis holds the task. A fixed worker pool controls how many slow investigations run at once.</p></article>
+        </div>
+      </section>
+
+      <section id="other-domains" class="chapter">
+        <p class="chapter-number">Chapter 12</p>
+        <h2>Can the same pattern work in another domain?</h2>
+        <p class="lead">
+          The complete commerce solution is commerce-specific. The framework
+          pattern and knowledge gateway are reusable.
+        </p>
+
+        <div class="reuse-diagram">
+          <div class="reuse-column stays">
+            <h3>Stays the same</h3>
+            <ul><li>Redis tasks and human approval</li><li>Skills lifecycle</li><li>Service discovery</li><li>Gateway capability contract</li><li>Search, filtering, exact reads, and traversal</li><li>Registry and Jaeger</li></ul>
+          </div>
+          <div class="reuse-arrow" aria-hidden="true">+</div>
+          <div class="reuse-column changes">
+            <h3>New for each domain</h3>
+            <ul><li>Business event and objective</li><li>Domain pack</li><li>Transaction tool</li><li>Deterministic policy rules</li><li>Mutation and verification</li><li>Procedure skill and agent prompt</li></ul>
+          </div>
+        </div>
+
+        <article class="it-proof">
+          <div>
+            <p class="mini-label">Live portability proof</p>
+            <h3>Commerce policy → IT access policy</h3>
+            <p>
+              The same running knowledge-gateway pod activated the IT pack
+              without a rebuild or restart.
+            </p>
+          </div>
+          <div class="it-relation">
+            <code>departed-user-revocation</code>
+            <span>IMPLEMENTED_BY →</span>
+            <code>offboarding-verification</code>
+          </div>
+          <dl>
+            <div><dt>Release</dt><dd><code>it-access-2026-08-20</code></dd></div>
+            <div><dt>Domain</dt><dd><code>it-access-governance</code></dd></div>
+            <div><dt>Restart count</dt><dd>0 during switch and restoration</dd></div>
+          </dl>
+        </article>
+
+        <p class="plain-note">
+          This direct gateway test proves the reusable knowledge contract. It
+          does not claim that the demo includes a full IT agent or an IT account
+          mutation service.
+        </p>
+      </section>
+
+      <section id="hands-on" class="chapter">
+        <p class="chapter-number">Chapter 13</p>
+        <h2>Run the demo yourself</h2>
+        <p class="lead">
+          Run commands from a terminal in the
+          <code>truva-g3-domain-examples/agentic-commerce</code> directory. Use this example's
+          setup script for every deployment operation.
+        </p>
+
+        <div class="prerequisites">
+          <h3>Before the first run</h3>
+          <ul>
+            <li>Docker or Podman is running.</li>
+            <li><code>kind</code>, <code>kubectl</code>, <code>curl</code>, and <code>jq</code> are installed.</li>
+            <li>The agent's <code>.env</code> contains one supported AI provider key.</li>
+          </ul>
+        </div>
+
+        <div class="command-steps">
+          <article>
+            <span>1</span><div><h3>See available commands</h3><pre><code>./setup.sh help</code></pre></div>
+          </article>
+          <article>
+            <span>2</span><div><h3>Bootstrap the framework workspace once</h3><pre><code>cd ../../truva-g3/examples/travel-chat-agent
+./setup.sh full-deploy
+cd ../../../truva-g3-domain-examples/agentic-commerce
+./setup.sh help</code></pre><p>The framework repository owns the cluster and shared infrastructure; this repository installs only the domain workloads.</p></div>
+          </article>
+          <article>
+            <span>3</span><div><h3>Deploy the three application services</h3><pre><code>./setup.sh deploy</code></pre></div>
+          </article>
+          <article>
+            <span>4</span><div><h3>Check pods, skills, and smoke tests</h3><pre><code>./setup.sh status
+./setup.sh skills-check
+./setup.sh test</code></pre></div>
+          </article>
+          <article>
+            <span>5</span><div><h3>Run the default outcome demonstration</h3><pre><code>./setup.sh demo</code></pre><p>This resets synthetic Commerce state, runs five outcome classes, and leaves the approval checkpoint pending for a person.</p></div>
+          </article>
+          <article>
+            <span>6</span><div><h3>Run deterministic evaluations</h3><pre><code>./setup.sh eval
+./setup.sh domain-conformance</code></pre></div>
+          </article>
+        </div>
+
+        <div class="manual-event">
+          <h3>Submit one event manually</h3>
+          <pre><code>jq --arg event_id "tutorial-auto-$(date +%s)" \
+  '.event_id = $event_id' scenarios/automatic-recovery.json |
+  curl -sS -X POST \
+    http://agentic-commerce.localhost/webhook/order-risk \
+    -H 'Content-Type: application/json' \
+    --data-binary @-</code></pre>
+          <p>
+            The HTTP 202 response contains a <code>task_id</code> and
+            <code>status_url</code>. Use the status URL to poll until the task is
+            complete or pending approval.
+          </p>
+        </div>
+      </section>
+
+      <section id="observability" class="chapter">
+        <p class="chapter-number">Chapter 14</p>
+        <h2>How to verify a live result</h2>
+        <p class="lead">
+          Do not trust only the final agent sentence. Check four views of the
+          same execution.
+        </p>
+
+        <div class="proof-layers">
+          <article><span>1</span><h3>Task API</h3><p>Shows the caller-visible status, final outcome, policy outcome, and request ID.</p></article>
+          <article><span>2</span><h3>Registry</h3><p>Shows skill version, plans, resolved tool calls, results, LLM records, and checkpoints.</p></article>
+          <article><span>3</span><h3>Jaeger</h3><p>Shows that the agent and tools actually communicated and records expected HTTP errors.</p></article>
+          <article><span>4</span><h3>Commerce state</h3><p>Shows whether the order changed, which command changed it, and whether it changed only once.</p></article>
+        </div>
+
+        <div class="observe-links">
+          <a class="button primary" href="http://registry.localhost/">Open Registry Viewer</a>
+          <a class="button secondary" href="http://jaeger.localhost/trace/f3952cb932773e34bedaff89cd2df4b5">Open the captured Jaeger trace</a>
+        </div>
+
+        <div class="known-limits">
+          <h3>Known Registry Viewer limitations</h3>
+          <p>
+            The business behaviours passed, but some presentation fields are
+            still inaccurate or incomplete. In particular, do not rely on the
+            displayed combined duration, zero DAG step durations, implied
+            cross-phase parallelism, or automatic joining of a human-approval
+            interruption with its resume execution.
+          </p>
+          <p>
+            The LLM Calls view contains the raw synthesis draft. The structured
+            task result and governed application response are authoritative.
+          </p>
+          <a href="../audits/OBSERVABILITY_AUDIT_AGENTIC_COMMERCE_2026-08-21.md">Read the detailed observability audit</a>
+        </div>
+
+        <div class="honest-boundaries">
+          <h3>What the demo does not prove</h3>
+          <ul>
+            <li>Production traffic capacity or service-level targets.</li>
+            <li>Durable Commerce state across pod restarts.</li>
+            <li>Authentication, tenant authorization, backup, or disaster recovery.</li>
+            <li>A continuously updated legal or policy corpus.</li>
+            <li>Provider embeddings or the deferred fifty-case evaluation.</li>
+            <li>A real refund, replacement shipment, carrier claim, or customer message.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="glossary" class="chapter glossary-chapter">
+        <p class="chapter-number">Chapter 15</p>
+        <h2>Glossary</h2>
+        <p class="lead">Use this section when you meet an unfamiliar term.</p>
+        <dl class="glossary">
+          <div><dt>AI</dt><dd>Artificial intelligence. In this demo, the AI component is a large language model used by the agent.</dd></div>
+          <div><dt>AI agent</dt><dd>Software that gives a language model an objective, instructions, and controlled tools.</dd></div>
+          <div><dt>API</dt><dd>Application Programming Interface. A defined way for software services to call each other.</dd></div>
+          <div><dt>Capability</dt><dd>One named operation exposed by a tool service, such as reading an order or evaluating policy.</dd></div>
+          <div><dt>Checkpoint</dt><dd>Saved execution state created before a sensitive step so a person can approve, reject, or abort it.</dd></div>
+          <div><dt>Deterministic</dt><dd>Produces the same result from the same validated input without model judgement.</dd></div>
+          <div><dt>Domain pack</dt><dd>A versioned collection of normalized policy sections, sources, dates, graph relations, search aliases, and tests.</dd></div>
+          <div><dt>Corpus</dt><dd>The full collection of documents or policy sections that the gateway can search.</dd></div>
+          <div><dt>Event</dt><dd>A small message saying that something happened and may need work, such as an order becoming missing in transit.</dd></div>
+          <div><dt>Evidence receipt</dt><dd>A short-lived signed statement proving that one exact policy section was read in a particular release and scope.</dd></div>
+          <div><dt>Graph database</dt><dd>A database that stores records and named relationships between them. The demo uses it for links such as “requires” and “overrides”.</dd></div>
+          <div><dt>Goroutine</dt><dd>A lightweight unit of concurrent work managed by the Go programming language runtime.</dd></div>
+          <div><dt>HITL</dt><dd>Human in the loop. The workflow pauses before a sensitive action and waits for a person.</dd></div>
+          <div><dt>Idempotency</dt><dd>A safety property that makes a repeated request return the original result instead of applying the business action again.</dd></div>
+          <div><dt>Jaeger</dt><dd>A trace viewer that shows calls across services.</dd></div>
+          <div><dt>JSON</dt><dd>A structured text format used for requests and responses between services.</dd></div>
+          <div><dt>Kind</dt><dd>A tool that runs a local Kubernetes cluster using containers.</dd></div>
+          <div><dt>Kubernetes</dt><dd>A platform that runs and manages containerised services.</dd></div>
+          <div><dt>LadybugDB</dt><dd>The embedded graph database library used for the gateway's disposable section-and-relation projection. It is not a separate service and does not currently perform relevance ranking.</dd></div>
+          <div><dt>LLM</dt><dd>Large language model. It helps the agent plan and summarise.</dd></div>
+          <div><dt>Mutation</dt><dd>A business data change. Creating a replacement and increasing the order version is the main mutation in this demo.</dd></div>
+          <div><dt>Pod</dt><dd>One running Kubernetes instance of a service.</dd></div>
+          <div><dt>Policy release</dt><dd>An immutable, identified snapshot of policy knowledge and deterministic thresholds.</dd></div>
+          <div><dt>Redis</dt><dd>A shared data service used here for discovery, tasks, deduplication, skills, and checkpoints.</dd></div>
+          <div><dt>Registry</dt><dd>The stored execution record containing plans, steps, skills, LLM interactions, and HITL snapshots.</dd></div>
+          <div><dt>Scope</dt><dd>The limits that decide where evidence applies, such as tenant, country, sales channel, and date.</dd></div>
+          <div><dt>Skill</dt><dd>A small operating procedure injected into agent planning. It is not the large domain corpus.</dd></div>
+          <div><dt>Tool service</dt><dd>A normal web service that exposes controlled capabilities to an agent.</dd></div>
+          <div><dt>Trace</dt><dd>A connected record of calls made across services during one execution.</dd></div>
+          <div><dt>Webhook</dt><dd>An HTTP address that accepts an event from another system.</dd></div>
+          <div><dt>Worker</dt><dd>A long-running goroutine inside the agent process that takes queued tasks from Redis.</dd></div>
+        </dl>
+      </section>
+
+      <section class="chapter continue-reading">
+        <h2>Continue reading</h2>
+        <p>
+          This page is the beginner path. The Markdown chapters provide more
+          detail, and the implementation and audit documents remain the source
+          of truth.
+        </p>
+        <div class="reference-links">
+          <a href="README.md">Detailed tutorial chapters</a>
+          <a href="gateway-xray.html">Domain Knowledge Gateway X-ray</a>
+          <a href="../../contracts/tool-capabilities.md">Tool capability contract</a>
+          <a href="../../scenarios/README.md">Manual scenario runbook</a>
+          <a href="../../../solution-blueprints/AGENTIC_COMMERCE_IMPLEMENTATION_PLAN.md">Implementation plan</a>
+          <a href="../../../solution-blueprints/AGENTIC_COMMERCE_CONTROL_TOWER.md">Control Tower blueprint</a>
+          <a href="../../../solution-blueprints/ENTERPRISE_KNOWLEDGE_FOUNDRY.md">Knowledge Foundry research</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <p>Agentic Commerce Control Tower capability demo · TruvaG3</p>
+    <p>This is an educational local demo. It is not legal advice or a production commerce system.</p>
+  </footer>
+</body>
+</html>

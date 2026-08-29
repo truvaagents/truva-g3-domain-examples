@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-conflicting-evidence-001",
+  "order_id": "ORD-1006",
+  "signal": "marketplace order is missing and two equally authoritative replacement rules disagree",
+  "requested_outcome": "classify the unresolved policy conflict without mutation",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z"
+}

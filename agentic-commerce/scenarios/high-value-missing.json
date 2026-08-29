@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-high-value-001",
+  "order_id": "ORD-1004",
+  "signal": "high-value FedEx shipment is missing in transit",
+  "requested_outcome": "choose an eligible recovery and request approval before mutation",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z"
+}

@@ -1,0 +1,9 @@
+{
+  "order_id": "ORD-1000",
+  "expected_terminal_outcome": "normal_order_confirmed",
+  "expected_fulfillment_status": "confirmed",
+  "expected_payment_status": "paid",
+  "expected_inventory_reserved": true,
+  "agent_invoked": false,
+  "llm_invoked": false
+}

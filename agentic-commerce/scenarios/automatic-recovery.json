@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-automatic-recovery-001",
+  "order_id": "ORD-1003",
+  "signal": "package is missing in transit and replacement inventory is available",
+  "requested_outcome": "create and verify the bounded automatic replacement",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z"
+}

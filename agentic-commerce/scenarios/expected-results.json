@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "scenarios": {
+    "normal-order": {
+      "fixture": "normal-order.json",
+      "expected_terminal_outcome": "normal_order_confirmed",
+      "business_mutation_expected": false,
+      "agent_invoked": false,
+      "llm_invoked": false,
+      "reserved_live_test": false
+    },
+    "automatic-recovery": {
+      "fixture": "automatic-recovery.json",
+      "expected_terminal_outcome": "recovered",
+      "expected_policy_outcome": "allowed",
+      "business_mutation_expected": true,
+      "reserved_live_test": false
+    },
+    "approval-required": {
+      "fixture": "high-value-missing.json",
+      "expected_terminal_outcome": "approval_required",
+      "expected_policy_outcome": "approval_required",
+      "business_mutation_expected": false,
+      "reserved_live_test": false
+    },
+    "denied-option": {
+      "fixture": "denied-option.json",
+      "expected_terminal_outcome": "denied",
+      "expected_policy_outcome": "denied",
+      "business_mutation_expected": false,
+      "reserved_live_test": false
+    },
+    "conflicting-evidence": {
+      "fixture": "conflicting-evidence.json",
+      "expected_terminal_outcome": "conflicting_evidence",
+      "expected_policy_outcome": "conflicting_evidence",
+      "business_mutation_expected": false,
+      "reserved_live_test": true
+    },
+    "policy-changed-during-hitl": {
+      "fixture": "policy-changed-during-hitl.json",
+      "expected_terminal_outcome": "policy_changed_during_hitl",
+      "expected_resume_status": "replan_required",
+      "business_mutation_expected": false,
+      "retry_same_event": true,
+      "control_actions": [
+        "gateway:activate:commerce-demo-policy-changed",
+        "commerce:activate_policy_release:commerce-us-2026-08-20-policy-change"
+      ],
+      "reserved_live_test": true
+    },
+    "policy-changed-reapproval": {
+      "fixture": "policy-changed-reapproval.json",
+      "expected_terminal_outcome": "approval_required",
+      "expected_policy_outcome": "approval_required",
+      "business_mutation_expected": false,
+      "retry_same_event": true,
+      "control_actions": [
+        "gateway:activate:commerce-demo-policy-changed",
+        "commerce:activate_policy_release:commerce-us-2026-08-20-policy-change"
+      ],
+      "reserved_live_test": true
+    },
+    "state-changed-during-hitl": {
+      "fixture": "state-changed-during-hitl.json",
+      "expected_terminal_outcome": "state_changed_during_hitl",
+      "expected_resume_status": "replan_required",
+      "business_mutation_expected": false,
+      "retry_same_event": true,
+      "control_actions": [
+        "commerce:set_inventory_unavailable:ORD-1004:v1"
+      ],
+      "reserved_live_test": true
+    },
+    "insufficient-evidence": {
+      "fixture": "insufficient-evidence.json",
+      "expected_terminal_outcome": "insufficient_evidence",
+      "expected_policy_outcome": "insufficient_evidence",
+      "business_mutation_expected": false,
+      "reserved_live_test": false
+    },
+    "alternate-domain-switching": {
+      "fixture": "",
+      "expected_active_pack": "it-access-demo",
+      "expected_release_id": "it-access-2026-08-20",
+      "expected_domain": "it-access-governance",
+      "expected_top_section": "departed-user-revocation",
+      "expected_related_section": "offboarding-verification",
+      "business_mutation_expected": false,
+      "reserved_live_test": true
+    }
+  }
+}

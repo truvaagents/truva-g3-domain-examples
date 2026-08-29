@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "domain": "commerce-order-recovery",
+  "tenant_id": "commerce-demo",
+  "release": {
+    "release_id": "commerce-us-2026-08-20-policy-change",
+    "published_at": "2026-08-20T18:05:00Z",
+    "valid_from": "2026-08-20T18:05:00Z",
+    "valid_to": "0001-01-01T00:00:00Z",
+    "content_hash": "sha256:460d1f0d7f89d2a649c7a94103ef9ba48f2474fca7f84ad50533d9eec48c2159",
+    "section_count": 0,
+    "source_count": 0
+  },
+  "semantic_aliases": {
+    "replace": "replacement",
+    "reship": "replacement",
+    "approve": "approval",
+    "approved": "approval",
+    "limit": "threshold",
+    "changed": "change"
+  },
+  "sources": [
+    {
+      "source_id": "commerce-demo-recovery-standard-v2",
+      "title": "Commerce Demo Recovery Standard v2",
+      "publisher": "TruvaG3 Capability Demo",
+      "url": "urn:truvag3:commerce-demo:recovery-standard:v2",
+      "source_type": "synthetic-enterprise-policy",
+      "retrieved_at": "2026-08-20T18:00:00Z",
+      "extraction_method": "authored-for-demo",
+      "license_note": "Synthetic changed policy release used only to demonstrate stale-basis protection."
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "demo-auto-recovery-bounds",
+      "document_id": "commerce-demo-recovery-standard-v2",
+      "title": "Changed bounded automatic replacement policy",
+      "content": "Effective with this release, a same-SKU replacement may proceed automatically up to 300 USD when inventory is available, destination is unchanged, fraud risk is low, and no restricted category is involved. Every command remains version-bound and idempotent.",
+      "jurisdiction": "global",
+      "channel": "online",
+      "effective_from": "2026-08-20T18:05:00Z",
+      "effective_to": "0001-01-01T00:00:00Z",
+      "priority": 90,
+      "tags": ["recovery", "replacement", "automation", "policy-change"],
+      "facts": {"max_auto_merchandise_value_usd": 300, "required": ["inventory_available", "unchanged_destination", "low_fraud_risk", "not_restricted", "idempotency_key", "release_hash"]}
+    },
+    {
+      "section_id": "demo-approval-thresholds",
+      "document_id": "commerce-demo-recovery-standard-v2",
+      "title": "Changed human approval thresholds",
+      "content": "Effective with this release, a same-SKU replacement requires human approval only above 300 USD. Merchandise refunds above 100 USD and restricted merchandise still require approval. Approval never replaces current-state, policy-release, expiry, or idempotency validation.",
+      "jurisdiction": "global",
+      "channel": "all",
+      "effective_from": "2026-08-20T18:05:00Z",
+      "effective_to": "0001-01-01T00:00:00Z",
+      "priority": 90,
+      "tags": ["approval", "replacement", "threshold", "policy-change"],
+      "facts": {"replacement_over_usd": 300, "refund_over_usd": 100, "always_approve": ["restricted_merchandise"]}
+    },
+    {
+      "section_id": "demo-verification-notification",
+      "document_id": "commerce-demo-recovery-standard-v2",
+      "title": "Post-command verification and notification",
+      "content": "A recovery is complete only after its action-specific state transition is verified and a synthetic notification records the command and active evidence release.",
+      "jurisdiction": "global",
+      "channel": "online",
+      "effective_from": "2026-08-20T18:05:00Z",
+      "effective_to": "0001-01-01T00:00:00Z",
+      "priority": 80,
+      "tags": ["verification", "notification", "audit"],
+      "facts": {"completion_requires": ["expected_order_state", "notification_record"]}
+    }
+  ],
+  "relations": [
+    {"from_section_id": "demo-auto-recovery-bounds", "type": "ESCALATES_TO", "to_section_id": "demo-approval-thresholds"},
+    {"from_section_id": "demo-auto-recovery-bounds", "type": "FOLLOWED_BY", "to_section_id": "demo-verification-notification"}
+  ],
+  "golden_cases": [
+    {
+      "case_id": "changed-high-value-replacement-threshold",
+      "query": "Under the changed policy does a 249 dollar same SKU replacement still require approval?",
+      "as_of": "2026-08-20T18:10:00Z",
+      "jurisdiction": "US",
+      "channel": "online",
+      "expected_section_ids": ["demo-auto-recovery-bounds", "demo-approval-thresholds"],
+      "forbidden_section_ids": []
+    }
+  ]
+}

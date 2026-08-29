@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-usps-express-001",
+  "order_id": "ORD-1003",
+  "signal": "Priority Mail Express package missed its guaranteed delivery time",
+  "requested_outcome": "recover the customer and preserve carrier claim evidence",
+  "requested_option_id": "carrier-service-claim",
+  "decision_time": "2026-08-20T18:00:00Z"
+}

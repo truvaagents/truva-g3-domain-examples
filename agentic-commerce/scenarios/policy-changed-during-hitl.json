@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-policy-changed-hitl-001",
+  "order_id": "ORD-1004",
+  "signal": "high-value missing shipment requires a replacement decision",
+  "requested_outcome": "pause for approval, then revalidate against the active policy release",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:10:00Z"
+}

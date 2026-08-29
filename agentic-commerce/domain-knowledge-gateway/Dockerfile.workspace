@@ -1,0 +1,45 @@
+FROM golang:1.26.6-bookworm AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl g++ git && rm -rf /var/lib/apt/lists/*
+ARG TARGETARCH
+ARG LADYBUG_VERSION=0.17.0
+RUN set -eu; \
+    case "$TARGETARCH" in \
+      arm64) archive="liblbug-linux-aarch64.tar.gz"; checksum="a486000f7305cb601e3074eb06026e9eddcf3d7517df7bbc913d2d36e3108121" ;; \
+      amd64) archive="liblbug-linux-x86_64.tar.gz"; checksum="f546b37616347533c5d08a38fd1c9f51bfe5e2c97c56d68582e07e675f546d4d" ;; \
+      *) echo "unsupported TARGETARCH=$TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    mkdir -p /opt/ladybug; \
+    curl -fsSL "https://github.com/LadybugDB/ladybug/releases/download/v${LADYBUG_VERSION}/${archive}" -o "/tmp/${archive}"; \
+    echo "${checksum}  /tmp/${archive}" | sha256sum -c -; \
+    tar xzf "/tmp/${archive}" -C /opt/ladybug; \
+    test -f /opt/ladybug/lbug.h; \
+    test -e /opt/ladybug/liblbug.so
+WORKDIR /workspace
+COPY truva-g3/core/ ./truva-g3/core/
+COPY truva-g3/resilience/ ./truva-g3/resilience/
+COPY truva-g3/telemetry/ ./truva-g3/telemetry/
+COPY truva-g3-domain-examples/agentic-commerce/domain-knowledge-gateway/ ./truva-g3-domain-examples/agentic-commerce/domain-knowledge-gateway/
+COPY truva-g3-domain-examples/agentic-commerce/domain-packs/ ./truva-g3-domain-examples/agentic-commerce/domain-packs/
+COPY truva-g3-domain-examples/agentic-commerce/commerce-core/data/policy-release.json ./truva-g3-domain-examples/agentic-commerce/commerce-core/data/policy-release.json
+COPY truva-g3-domain-examples/agentic-commerce/commerce-core/data/policy-release-changed.json ./truva-g3-domain-examples/agentic-commerce/commerce-core/data/policy-release-changed.json
+WORKDIR /workspace/truva-g3-domain-examples/agentic-commerce/domain-knowledge-gateway
+ENV GOWORK=off CGO_ENABLED=1 GOOS=linux CGO_CFLAGS=-I/opt/ladybug
+ENV CGO_LDFLAGS="-L/opt/ladybug -Wl,-rpath,/usr/local/lib"
+ENV LD_LIBRARY_PATH=/opt/ladybug
+RUN go mod download && go mod verify
+RUN go test -tags "ladybug system_ladybug" ./...
+RUN go build -trimpath -tags "ladybug system_ladybug" -ldflags="-s -w" -o /out/domain-knowledge-gateway .
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libstdc++6 && rm -rf /var/lib/apt/lists/* && groupadd -g 1001 app && useradd -u 1001 -g app -M -s /usr/sbin/nologin app
+WORKDIR /app
+COPY --from=builder /out/domain-knowledge-gateway ./domain-knowledge-gateway
+COPY --from=builder /opt/ladybug/liblbug.so.0.17.0 /usr/local/lib/liblbug.so.0.17.0
+COPY --from=builder /workspace/truva-g3-domain-examples/agentic-commerce/domain-packs ./domain-packs
+RUN ln -s liblbug.so.0.17.0 /usr/local/lib/liblbug.so.0 && \
+    ln -s liblbug.so.0 /usr/local/lib/liblbug.so && \
+    ldconfig && mkdir -p /data && chown -R 1001:1001 /app /data
+USER 1001:1001
+ENV PORT=8396 DOMAIN_PACK_PATH=/app/domain-packs/commerce-demo/pack.json KNOWLEDGE_STORE_PATH=/data/knowledge.lbug
+EXPOSE 8396
+ENTRYPOINT ["./domain-knowledge-gateway"]

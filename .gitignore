@@ -1,0 +1,20 @@
+.DS_Store
+.env
+**/.env
+
+# Go outputs
+coverage.out
+coverage-*.out
+agentic-commerce/commerce-core/commerce-core
+agentic-commerce/domain-knowledge-gateway/domain-knowledge-gateway
+agentic-commerce/order-operations-agent/order-operations-agent
+
+# Embedded LadybugDB runtime files
+agentic-commerce/**/lib-ladybug/
+agentic-commerce/**/data/*.lbug
+agentic-commerce/**/data/*.wal
+
+# Local browser and editor artifacts
+.playwright-mcp/
+.vscode/
+.idea/

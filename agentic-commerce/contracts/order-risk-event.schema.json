@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:truvag3:agentic-commerce:order-risk-event:v1",
+  "title": "Order Risk Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "order_id", "signal"],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "order_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "signal": {"type": "string", "minLength": 1, "maxLength": 256},
+    "requested_outcome": {"type": "string", "maxLength": 256},
+    "requested_option_id": {
+      "type": "string",
+      "enum": [
+        "wait-for-current-fulfillment",
+        "cancel-and-refund",
+        "refund-merchandise",
+        "same-sku-replacement",
+        "carrier-service-claim"
+      ]
+    },
+    "decision_time": {"type": "string", "format": "date-time"}
+  }
+}

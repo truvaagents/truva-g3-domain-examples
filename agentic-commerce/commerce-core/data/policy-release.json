@@ -1,0 +1,28 @@
+{
+  "release_id": "commerce-us-2026-08-20",
+  "content_hash": "sha256:49643f3bb48d35aa04ea786ab1b0205475eadcbfd247cd74cc8c55a4a5153d28",
+  "section_ids": [
+    "ftc-shipment-representation",
+    "ftc-delay-consent-or-refund",
+    "ftc-prompt-refund-timing",
+    "target-general-return-window",
+    "target-electronics-return-window",
+    "target-marketplace-return-window",
+    "walmart-general-return-window",
+    "walmart-electronics-marketplace-exceptions",
+    "usps-priority-express-eligibility",
+    "usps-priority-express-claim-window",
+    "fedex-guarantee-service-scope",
+    "demo-missing-merchandise-refund",
+    "demo-evidence-precedence",
+    "demo-auto-recovery-bounds",
+    "demo-approval-thresholds",
+    "demo-replacement-conflict-allow",
+    "demo-replacement-conflict-deny",
+    "demo-verification-notification"
+  ],
+  "rules": {
+    "refund_approval_over_usd": 100,
+    "replacement_approval_over_usd": 75
+  }
+}

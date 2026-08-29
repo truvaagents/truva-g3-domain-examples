@@ -1,0 +1,439 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-operations-agent-config
+  namespace: truvag3-examples
+  labels:
+    app.kubernetes.io/part-of: agentic-commerce
+data:
+  APP_ENV: "development"
+  PORT: "8394"
+  NAMESPACE: "truvag3-examples"
+  OTEL_SERVICE_NAME: "order-operations-agent"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.truvag3-examples:4318"
+  WORKER_COUNT: "2"
+  TRUVAG3_AGENT_NAME: "order-operations-agent"
+  TRUVAG3_LLM_DEBUG_ENABLED: "true"
+  TRUVAG3_EXECUTION_DEBUG_STORE_ENABLED: "true"
+  TRUVAG3_HITL_ENABLED: "true"
+  TRUVAG3_HITL_REQUIRE_PLAN_APPROVAL: "false"
+  TRUVAG3_HITL_STEP_SENSITIVE_CAPABILITIES: "execute_recovery_command"
+  TRUVAG3_HITL_DEFAULT_TIMEOUT: "10m"
+  TRUVAG3_HITL_DEFAULT_ACTION: "reject"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: commerce-core-config
+  namespace: truvag3-examples
+  labels:
+    app.kubernetes.io/part-of: agentic-commerce
+data:
+  APP_ENV: "development"
+  PORT: "8395"
+  NAMESPACE: "truvag3-examples"
+  OTEL_SERVICE_NAME: "commerce-core"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.truvag3-examples:4318"
+  COMMERCE_ORDERS_PATH: "/app/data/orders.json"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: domain-knowledge-gateway-config
+  namespace: truvag3-examples
+  labels:
+    app.kubernetes.io/part-of: agentic-commerce
+data:
+  APP_ENV: "development"
+  PORT: "8396"
+  NAMESPACE: "truvag3-examples"
+  OTEL_SERVICE_NAME: "domain-knowledge-gateway"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.truvag3-examples:4318"
+  DOMAIN_PACK_PATH: "/app/domain-packs/commerce-demo/pack.json"
+  DOMAIN_PACK_ROOT: "/app/domain-packs"
+  KNOWLEDGE_STORE_PATH: "/data/knowledge.lbug"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-operations-agent-service
+  namespace: truvag3-examples
+  labels:
+    app: order-operations-agent
+    component: agent
+    framework: truvag3
+    app.kubernetes.io/part-of: agentic-commerce
+spec:
+  selector:
+    app: order-operations-agent
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-operations-agent
+  namespace: truvag3-examples
+  labels:
+    app: order-operations-agent
+    component: agent
+    framework: truvag3
+    app.kubernetes.io/part-of: agentic-commerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-operations-agent
+  template:
+    metadata:
+      labels:
+        app: order-operations-agent
+        component: agent
+        framework: truvag3
+        truvag3.framework/type: agent
+        app.kubernetes.io/part-of: agentic-commerce
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: order-operations-agent
+        image: order-operations-agent:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8394
+        envFrom:
+        - configMapRef:
+            name: order-operations-agent-config
+        - configMapRef:
+            name: order-operations-agent-env-config
+            optional: true
+        - secretRef:
+            name: ai-provider-keys-order-operations-agent
+            optional: true
+        - secretRef:
+            name: agentic-commerce-control-secrets
+        env:
+        - name: REDIS_URL
+          value: "redis://redis.truvag3-examples:6379"
+        - name: TRUVAG3_K8S_SERVICE_NAME
+          value: "order-operations-agent-service"
+        - name: TRUVAG3_HITL_WEBHOOK_URL
+          value: "http://order-operations-agent-service/internal/hitl-webhook"
+        - name: TRUVAG3_K8S_SERVICE_PORT
+          value: "80"
+        - name: TRUVAG3_K8S_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: TRUVAG3_K8S_POD_APP_LABEL
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app']
+        - name: TRUVAG3_K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "48Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 5
+          failureThreshold: 18
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 30
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: commerce-core-service
+  namespace: truvag3-examples
+  labels:
+    app: commerce-core
+    component: tool
+    framework: truvag3
+    app.kubernetes.io/part-of: agentic-commerce
+spec:
+  selector:
+    app: commerce-core
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: commerce-core
+  namespace: truvag3-examples
+  labels:
+    app: commerce-core
+    component: tool
+    framework: truvag3
+    app.kubernetes.io/part-of: agentic-commerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: commerce-core
+  template:
+    metadata:
+      labels:
+        app: commerce-core
+        component: tool
+        framework: truvag3
+        truvag3.framework/type: tool
+        app.kubernetes.io/part-of: agentic-commerce
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: commerce-core
+        image: commerce-core:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8395
+        envFrom:
+        - configMapRef:
+            name: commerce-core-config
+        - configMapRef:
+            name: commerce-core-env-config
+            optional: true
+        - secretRef:
+            name: agentic-commerce-control-secrets
+        env:
+        - name: REDIS_URL
+          value: "redis://redis.truvag3-examples:6379"
+        - name: TRUVAG3_DISCOVERY_RETRY
+          value: "true"
+        - name: TRUVAG3_DISCOVERY_RETRY_INTERVAL
+          value: "30s"
+        - name: TRUVAG3_K8S_SERVICE_NAME
+          value: "commerce-core-service"
+        - name: TRUVAG3_K8S_SERVICE_PORT
+          value: "80"
+        - name: TRUVAG3_K8S_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: TRUVAG3_K8S_POD_APP_LABEL
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app']
+        - name: TRUVAG3_K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "24Mi"
+          limits:
+            cpu: "250m"
+            memory: "128Mi"
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 5
+          failureThreshold: 12
+        readinessProbe:
+          httpGet:
+            path: /api/capabilities
+            port: http
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: domain-knowledge-gateway-service
+  namespace: truvag3-examples
+  labels:
+    app: domain-knowledge-gateway
+    component: tool
+    framework: truvag3
+    app.kubernetes.io/part-of: agentic-commerce
+spec:
+  selector:
+    app: domain-knowledge-gateway
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: domain-knowledge-gateway
+  namespace: truvag3-examples
+  labels:
+    app: domain-knowledge-gateway
+    component: tool
+    framework: truvag3
+    app.kubernetes.io/part-of: agentic-commerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: domain-knowledge-gateway
+  template:
+    metadata:
+      labels:
+        app: domain-knowledge-gateway
+        component: tool
+        framework: truvag3
+        truvag3.framework/type: tool
+        app.kubernetes.io/part-of: agentic-commerce
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: domain-knowledge-gateway
+        image: domain-knowledge-gateway:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8396
+        envFrom:
+        - configMapRef:
+            name: domain-knowledge-gateway-config
+        - configMapRef:
+            name: domain-knowledge-gateway-env-config
+            optional: true
+        - secretRef:
+            name: agentic-commerce-control-secrets
+        env:
+        - name: REDIS_URL
+          value: "redis://redis.truvag3-examples:6379"
+        - name: TRUVAG3_DISCOVERY_RETRY
+          value: "true"
+        - name: TRUVAG3_DISCOVERY_RETRY_INTERVAL
+          value: "30s"
+        - name: TRUVAG3_K8S_SERVICE_NAME
+          value: "domain-knowledge-gateway-service"
+        - name: TRUVAG3_K8S_SERVICE_PORT
+          value: "80"
+        - name: TRUVAG3_K8S_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: TRUVAG3_K8S_POD_APP_LABEL
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app']
+        - name: TRUVAG3_K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: knowledge-data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "96Mi"
+          limits:
+            cpu: "500m"
+            memory: "384Mi"
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 5
+          failureThreshold: 24
+        readinessProbe:
+          httpGet:
+            path: /api/capabilities
+            port: http
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+      volumes:
+      - name: knowledge-data
+        emptyDir: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentic-commerce-ingress
+  namespace: truvag3-examples
+  labels:
+    app: order-operations-agent
+    app.kubernetes.io/part-of: agentic-commerce
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: agentic-commerce.localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: order-operations-agent-service
+            port:
+              number: 80

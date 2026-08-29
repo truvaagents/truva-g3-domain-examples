@@ -1,0 +1,1115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A live, evidence-backed X-ray of the Agentic Commerce Domain Knowledge Gateway.">
+  <title>Domain Knowledge Gateway X-ray — Agentic Commerce Tutorial</title>
+  <script>
+    (function () {
+      var theme = "";
+      try {
+        theme = localStorage.getItem("agentic-commerce-tutorial-theme") || "";
+      } catch (error) {
+        theme = "";
+      }
+      if (theme !== "light" && theme !== "dark") {
+        theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      }
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="tutorial.css">
+  <script src="tutorial.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to the X-ray</a>
+
+  <header class="hero xray-hero">
+    <div class="hero-inner">
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">
+        <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+        <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+        <span id="theme-toggle-label">Night mode</span>
+      </button>
+      <p class="eyebrow">Live evidence · Gateway internals · Direct queries</p>
+      <h1>Domain Knowledge Gateway X-ray</h1>
+      <p class="hero-summary">
+        Follow one fresh agent execution into the gateway. See the data it
+        loaded, every request the agent made, every important response, the
+        ranking algorithm, the graph links, and direct positive and negative
+        queries against the running pod.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="#live-execution">Start with the live execution</a>
+        <a class="button secondary" href="index.html#knowledge-gateway-explained">Return to the conceptual tutorial</a>
+      </div>
+      <ul class="hero-facts" aria-label="X-ray evidence summary">
+        <li><strong>5</strong><span>gateway calls</span></li>
+        <li><strong>10</strong><span>ranked candidates</span></li>
+        <li><strong>3</strong><span>exact reads</span></li>
+        <li><strong>26 KB</strong><span>active pack</span></li>
+      </ul>
+    </div>
+  </header>
+
+  <div class="page-shell">
+    <aside class="lesson-nav" aria-label="Gateway X-ray sections">
+      <p class="lesson-nav-title">X-ray path</p>
+      <ol>
+        <li><a href="#live-execution">Fresh execution</a></li>
+        <li><a href="#five-calls">Five gateway calls</a></li>
+        <li><a href="#search-result">Search result</a></li>
+        <li><a href="#exact-evidence">Exact evidence</a></li>
+        <li><a href="#loaded-data">Loaded data</a></li>
+        <li><a href="#direct-queries">Direct queries</a></li>
+        <li><a href="#algorithm">Search algorithm</a></li>
+        <li><a href="#ladybug-role">LadybugDB</a></li>
+        <li><a href="#large-corpus">Large corpora</a></li>
+      </ol>
+      <div class="xray-nav-return">
+        <a href="index.html">← Main tutorial</a>
+        <a href="09-domain-knowledge-gateway-xray.md">Detailed Markdown</a>
+      </div>
+    </aside>
+
+    <main id="main-content">
+      <section id="live-execution" class="chapter intro-chapter">
+        <p class="chapter-number">X-ray 1</p>
+        <h2>One fresh live execution</h2>
+        <p class="lead">
+          The demo state was reset first. The gateway was pinned to the baseline
+          commerce release. A unique event then entered through the public agent
+          webhook—not through a direct gateway shortcut.
+        </p>
+
+        <div class="xray-reading-guide" aria-label="How to read the evidence in this tutorial">
+          <div class="xray-reading-heading">
+            <p class="mini-label">Before we open the machine</p>
+            <h3>We will look through three windows</h3>
+            <p>
+              Each window answers a different question. Keeping them separate
+              prevents an old execution record from being confused with the
+              order's current state.
+            </p>
+          </div>
+          <ol>
+            <li>
+              <span>1</span>
+              <div><strong>Stored execution</strong><p>What did the agent and services exchange during this exact run?</p></div>
+              <small>Registry request <code>order-operations-…7502</code></small>
+            </li>
+            <li>
+              <span>2</span>
+              <div><strong>Fresh gateway call</strong><p>Does the running gateway still return the same release, policy text, ranking, and graph links?</p></div>
+              <small>Direct HTTP call through temporary port <code>8396</code></small>
+            </li>
+            <li>
+              <span>3</span>
+              <div><strong>Fresh order-state read</strong><p>What changed after Commerce Core executed the approved command?</p></div>
+              <small>Direct read from Commerce Core through port <code>8395</code></small>
+            </li>
+          </ol>
+        </div>
+
+        <div class="xray-time-rule">
+          <strong>The simple time rule</strong>
+          <p><b>Registry = then.</b> Direct service reads = now. The stored run began with order version 1 and ended with version 2, so a direct read today should show the completed version 2—not the old input.</p>
+        </div>
+
+        <div class="evidence-identifiers xray-identifiers">
+          <div><span>Event</span><code>xray-gateway-1787796603482513000</code></div>
+          <div><span>Task</span><code>order-event-xray-gateway-1787796603482513000</code></div>
+          <div><span>Registry request</span><code>order-operations-1787796611243177502</code></div>
+          <div><span>Jaeger trace</span><code>a5a2d1f925ba11caa89ebcb35dff5fae</code></div>
+        </div>
+
+        <div class="code-pair">
+          <div>
+            <h3>Submitted to the agent webhook</h3>
+            <pre><code>{
+  "order_id": "ORD-1003",
+  "signal": "package is missing in transit and
+             replacement inventory is available",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z"
+}</code></pre>
+          </div>
+          <div>
+            <h3>Completed task result</h3>
+            <pre><code>{
+  "terminal_outcome": "recovered",
+  "policy_outcome": "allowed",
+  "order_id": "ORD-1003",
+  "verified": true,
+  "order_version_after": 2,
+  "fulfillment_status": "replacement_created"
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="result-chain" role="img" aria-label="The caller posts an event to the agent. The agent reads business state, calls the gateway five times, sends proven evidence to Commerce Core, and Commerce Core executes and verifies the replacement.">
+          <div><span>Trigger</span><strong>Agent webhook</strong><small>unique event ID</small></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Investigate</span><strong>Order facts</strong><small>version 1 · $69</small></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Retrieve</span><strong>5 gateway calls</strong><small>release · search · exact reads</small></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Decide</span><strong>Commerce Core</strong><small>allowed · no approval</small></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Verify</span><strong>Order version 2</strong><small>replacement_created</small></div>
+        </div>
+
+        <h3 class="section-heading">The business state really changed</h3>
+        <div class="xray-before-after">
+          <article>
+            <p class="mini-label">Stored at the start of the execution</p>
+            <h4>Before: version 1</h4>
+            <dl>
+              <div><dt>Item value</dt><dd>$69</dd></div>
+              <div><dt>Inventory</dt><dd>Available</dd></div>
+              <div><dt>Fraud risk</dt><dd>Low</dd></div>
+              <div><dt>Restricted item</dt><dd>No</dd></div>
+              <div><dt>Fulfilment</dt><dd><code>missing_in_transit</code></dd></div>
+            </dl>
+          </article>
+          <div class="xray-state-arrow" aria-hidden="true"><span>verified command</span><b>→</b></div>
+          <article>
+            <p class="mini-label">Read directly after the execution</p>
+            <h4>After: version 2</h4>
+            <dl>
+              <div><dt>Recovery option</dt><dd><code>same-sku-replacement</code></dd></div>
+              <div><dt>Command status</dt><dd>Completed</dd></div>
+              <div><dt>Fulfilment</dt><dd><code>replacement_created</code></dd></div>
+              <div><dt>Verified</dt><dd>Yes</dd></div>
+              <div><dt>Evidence release</dt><dd><code>commerce-us-2026-08-20</code></dd></div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <section id="five-calls" class="chapter">
+        <p class="chapter-number">X-ray 2</p>
+        <h2>Every gateway call made by the agent</h2>
+        <p class="lead">
+          Registry stored the resolved JSON parameters and responses. Jaeger
+          independently proved that the gateway server received five HTTP POSTs.
+        </p>
+
+        <div class="table-wrap">
+          <table class="execution-table">
+            <thead><tr><th>Step</th><th>Capability</th><th>Resolved input</th><th>Returned</th><th>Registry time</th></tr></thead>
+            <tbody>
+              <tr><td>4</td><td><code>get_release_info</code></td><td><code>{}</code></td><td>Release ID, hash, dates, 18 sections, 7 sources</td><td>3.125 ms</td></tr>
+              <tr><td>3</td><td><code>search_evidence</code></td><td>Replacement authority query + commerce/US/online/time scope</td><td>10 ranked candidates + 8 one-hop paths</td><td>17.512 ms</td></tr>
+              <tr><td>5</td><td><code>read_exact_section</code></td><td><code>demo-auto-recovery-bounds</code></td><td>Exact section, source, release, signed receipt</td><td>5.109 ms</td></tr>
+              <tr><td>6</td><td><code>read_exact_section</code></td><td><code>demo-approval-thresholds</code></td><td>Exact section, source, release, signed receipt</td><td>5.829 ms</td></tr>
+              <tr><td>7</td><td><code>read_exact_section</code></td><td><code>demo-evidence-precedence</code></td><td>Exact section, source, release, signed receipt</td><td>4.706 ms</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="gateway-reality-note xray-answer">
+          <strong>Why no separate traversal call?</strong>
+          <span><code>search_evidence</code> automatically attached one-hop relation paths from its ranked sections. The agent used the returned <code>ESCALATES_TO</code> and <code>REQUIRES</code> paths. A separate <code>traverse_relations</code> call was unnecessary in this run.</span>
+        </div>
+
+        <div class="xray-call-story">
+          <article><span>First</span><strong>Pin the release</strong><p>Get a stable release ID and content hash so later evidence cannot quietly move to another pack.</p></article>
+          <article><span>Next</span><strong>Search within scope</strong><p>Find likely section IDs and their authored neighbours. Search returns hints, not command authority.</p></article>
+          <article><span>Then, in parallel</span><strong>Read three exact sections</strong><p>The agent already knew the three IDs, so it did not need to wait for one read before starting the next.</p></article>
+        </div>
+
+        <p class="xray-step-order-note">
+          <strong>Why the table says step 4 before step 3:</strong> the step
+          number belongs to the orchestration plan; the table is grouped by
+          logical purpose. Concurrent work can finish and be stored in a
+          different visual order. The data dependencies—not the row order—tell
+          us what had to happen first.
+        </p>
+
+        <p class="plain-note">
+          The gateway pod logs provide a third matching view: one release call,
+          one search with <code>candidate_count=10</code>,
+          <code>path_count=8</code>, and <code>warning_count=0</code>, followed by
+          three successful exact reads. Every gateway HTTP response was 200.
+        </p>
+
+        <div class="reference-links">
+          <a href="http://registry.localhost/">Open Registry Viewer</a>
+          <a href="http://jaeger.localhost/trace/a5a2d1f925ba11caa89ebcb35dff5fae">Open this Jaeger trace</a>
+        </div>
+      </section>
+
+      <section id="search-result" class="chapter">
+        <p class="chapter-number">X-ray 3</p>
+        <h2>The search request and its actual ranking</h2>
+        <p class="lead">The agent asked a focused business question and supplied hard scope fields separately.</p>
+
+        <pre><code>{
+  "query": "same-SKU replacement authorization for missing in transit orders:
+            enterprise authority, inventory availability, low fraud risk,
+            restricted merchandise exclusions, value thresholds,
+            and approval requirements",
+  "tenant_id": "commerce-demo",
+  "jurisdiction": "US",
+  "channel": "online",
+  "as_of": "2026-08-20T18:00:00Z",
+  "limit": 20
+}</code></pre>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Rank</th><th>Section</th><th>RRF score</th><th>Selected for exact read?</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td><code>demo-auto-recovery-bounds</code></td><td>0.032522</td><td>Yes</td></tr>
+              <tr><td>2</td><td><code>ftc-delay-consent-or-refund</code></td><td>0.031778</td><td>No</td></tr>
+              <tr><td>3</td><td><code>demo-approval-thresholds</code></td><td>0.031754</td><td>Yes</td></tr>
+              <tr><td>4</td><td><code>demo-missing-merchandise-refund</code></td><td>0.031025</td><td>No</td></tr>
+              <tr><td>5</td><td><code>demo-evidence-precedence</code></td><td>0.031010</td><td>Yes</td></tr>
+              <tr><td>6</td><td><code>walmart-general-return-window</code></td><td>0.030798</td><td>No</td></tr>
+              <tr><td>7</td><td><code>ftc-shipment-representation</code></td><td>0.029644</td><td>No</td></tr>
+              <tr><td>8</td><td><code>demo-verification-notification</code></td><td>0.029412</td><td>No—post-decision procedure</td></tr>
+              <tr><td>9</td><td><code>target-general-return-window</code></td><td>0.029211</td><td>No</td></tr>
+              <tr><td>10</td><td><code>ftc-prompt-refund-timing</code></td><td>0.028778</td><td>No</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="section-heading">The graph clues returned with search</h3>
+        <div class="xray-relation-map" role="img" aria-label="The automatic recovery section escalates to approval thresholds, requires evidence precedence, and is followed by verification and notification.">
+          <div class="xray-relation-root"><span>Top candidate</span><strong>demo-auto-recovery-bounds</strong></div>
+          <div class="xray-relation-links">
+            <div><code>ESCALATES_TO</code><span>→</span><strong>demo-approval-thresholds</strong></div>
+            <div><code>REQUIRES</code><span>→</span><strong>demo-evidence-precedence</strong></div>
+            <div><code>FOLLOWED_BY</code><span>→</span><strong>demo-verification-notification</strong></div>
+          </div>
+        </div>
+
+        <p class="plain-note">
+          A score means “inspect this candidate.” It is not a probability that
+          the policy is correct and it does not authorize an action.
+        </p>
+
+        <details class="xray-disclosure" open>
+          <summary>Slow down: what is one search candidate?</summary>
+          <div class="xray-disclosure-body">
+            <p>
+              A candidate is a ranked search result. It includes the normalized
+              section and source so the agent can inspect the possible match.
+              Think of it as a library copy marked “possible match”: it helps
+              the agent choose, but it is not the signed policy proof that
+              Commerce Core accepts.
+            </p>
+            <div class="xray-annotated-json">
+              <pre><code>{
+  "section": {
+    "section_id": "demo-auto-recovery-bounds",
+    "title": "Bounded automatic recovery options",
+    "content": "After eligibility is supported ..."
+  },
+  "source": {
+    "source_id": "commerce-demo-recovery-standard",
+    "title": "Commerce Demo Recovery Standard v1"
+  },
+  "score": 0.032522,
+  "retrieval": "rrf(bm25+semantic)"
+}</code></pre>
+              <ol>
+                <li><b>The nested section ID</b> is the address used for the later exact read. Search also provides preview data.</li>
+                <li><b>The score</b> only places this result ahead of other candidates.</li>
+                <li><b>The nested source</b> helps the agent judge provenance, but the selected section is still exact-read next.</li>
+                <li><b>No signed receipt</b> is present yet. Therefore this object cannot authorize a command.</li>
+              </ol>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section id="exact-evidence" class="chapter">
+        <p class="chapter-number">X-ray 4</p>
+        <h2>Watch one search result become usable proof</h2>
+        <p class="lead">
+          This is the most important part of the gateway. We will follow one
+          policy section field by field: first as a search hint, then as exact
+          text, then as a signed receipt, and finally as input to Commerce Core.
+        </p>
+
+        <div class="xray-vocabulary">
+          <article>
+            <span>1</span><h3>Candidate</h3>
+            <p>A ranked possible match with section and source data. Useful for discovery, but not signed proof.</p>
+          </article>
+          <article>
+            <span>2</span><h3>Exact section</h3>
+            <p>The complete normalized policy unit at one stable section ID.</p>
+          </article>
+          <article>
+            <span>3</span><h3>Source</h3>
+            <p>The title, publisher, URL, and extraction method that explain where the section came from.</p>
+          </article>
+          <article>
+            <span>4</span><h3>Receipt</h3>
+            <p>A short-lived signed proof that this exact section was read under this exact scope.</p>
+          </article>
+        </div>
+
+        <div class="xray-proof-flow" role="img" aria-label="A ranked candidate supplies a section ID. The agent exact reads that ID. The gateway returns policy text, structured facts, source provenance, and a signed receipt. The agent carries the section ID and receipt to Commerce Core, which verifies them and evaluates the current order.">
+          <div><span>Search hint</span><strong>Candidate</strong><small>section ID + rank</small></div>
+          <b aria-hidden="true">→</b>
+          <div><span>Agent asks</span><strong>Exact read</strong><small>ID + full scope</small></div>
+          <b aria-hidden="true">→</b>
+          <div class="xray-proof-output"><span>Gateway returns together</span><strong>Text + facts + source + receipt</strong><small>one indivisible evidence bundle</small></div>
+          <b aria-hidden="true">→</b>
+          <div><span>Commerce Core</span><strong>Verify + compare</strong><small>proof against order facts</small></div>
+        </div>
+
+        <p class="xray-evidence-source registry-proof"><span>Stored execution evidence</span> Registry · request <code>order-operations-1787796611243177502</code> · step 5</p>
+        <h3 class="section-heading">Step A — the exact request recorded in the execution</h3>
+        <p>
+          The agent took the first candidate's stable ID and called
+          <code>read_exact_section</code>. Notice that it did not send only the
+          ID. It repeated the tenant, place, sales channel, policy time, and
+          release. These fields are the fence around the evidence.
+        </p>
+        <pre><code>{
+  "tenant_id": "commerce-demo",
+  "jurisdiction": "US",
+  "channel": "online",
+  "as_of": "2026-08-20T18:00:00Z",
+  "release_id": "commerce-us-2026-08-20",
+  "section_id": "demo-auto-recovery-bounds"
+}</code></pre>
+
+        <div class="xray-field-guide">
+          <div><code>tenant_id</code><span>Whose policy?</span><p>The synthetic commerce company, not another tenant.</p></div>
+          <div><code>jurisdiction</code><span>Which legal area?</span><p>United States rules and policy.</p></div>
+          <div><code>channel</code><span>Which business channel?</span><p>The online-order version, not a store-only rule.</p></div>
+          <div><code>as_of</code><span>Valid at what business time?</span><p>The event's decision time, reused exactly for every read.</p></div>
+          <div><code>release_id</code><span>Which frozen evidence set?</span><p>The release pinned earlier in the same run.</p></div>
+          <div><code>section_id</code><span>Which exact policy unit?</span><p>The address selected from the ranked candidates.</p></div>
+        </div>
+
+        <p class="xray-evidence-source direct-proof"><span>Fresh direct-service evidence</span> Domain Knowledge Gateway · <code>read_exact_section</code> through port 8396</p>
+        <h3 class="section-heading">Step B — the live gateway returned this evidence bundle</h3>
+        <p>
+          The following is a shortened only-for-display copy of the response
+          reproduced by calling the running gateway directly. The policy text,
+          facts, source metadata, and release identity are shown unchanged. Only
+          the reusable receipt signature is hidden.
+        </p>
+
+        <details class="xray-disclosure xray-raw-response" open>
+          <summary>Open the returned JSON and read it with me</summary>
+          <div class="xray-disclosure-body">
+            <pre><code>{
+  "success": true,
+  "data": {
+    "release": {
+      "release_id": "commerce-us-2026-08-20",
+      "content_hash": "sha256:49643f3bb48d35aa04ea786ab1b0205475eadcbfd247cd74cc8c55a4a5153d28"
+    },
+    "section": {
+      "section_id": "demo-auto-recovery-bounds",
+      "title": "Bounded automatic recovery options",
+      "content": "After eligibility is supported by cited evidence, the demo may automatically offer a same-SKU replacement or equivalent reroute when merchandise value is at most 75 USD, inventory is available, destination is unchanged, fraud risk is low, and no restricted category is involved. The command must carry an idempotency key and the evidence release hash.",
+      "facts": {
+        "max_auto_merchandise_value_usd": 75,
+        "required": [
+          "inventory_available",
+          "unchanged_destination",
+          "low_fraud_risk",
+          "not_restricted",
+          "idempotency_key",
+          "release_hash"
+        ]
+      }
+    },
+    "source": {
+      "source_id": "commerce-demo-recovery-standard",
+      "title": "Commerce Demo Recovery Standard v1",
+      "publisher": "TruvaG3 Capability Demo",
+      "url": "urn:truvag3:commerce-demo:recovery-standard:v1",
+      "source_type": "synthetic-enterprise-policy",
+      "extraction_method": "authored-for-demo"
+    },
+    "evidence_receipt": "eyJ2ZXJzaW9uIjoxLCJzZWN0aW9uX2lkIjoiLi4u.&lt;signature-redacted&gt;"
+  }
+}</code></pre>
+            <div class="xray-response-map">
+              <article><span>release</span><p>Names and hashes the frozen pack. Changing one canonical byte changes the hash.</p></article>
+              <article><span>section</span><p>Contains the exact human-readable rule plus structured facts useful to deterministic code.</p></article>
+              <article><span>source</span><p>Shows who published it and how this demo obtained it. This section is clearly labelled synthetic.</p></article>
+              <article><span>evidence_receipt</span><p>Binds the exact read to release, section, scope, time, and a short validity window.</p></article>
+            </div>
+          </div>
+        </details>
+
+        <div class="xray-proof-statement">
+          <span aria-hidden="true">✓</span>
+          <p><strong>What this direct call proved:</strong> the currently running gateway still serves the same automatic-recovery text under the same release hash as the stored agent execution.</p>
+        </div>
+
+        <p class="xray-evidence-source registry-proof"><span>Stored execution evidence</span> Registry · steps 5, 6, and 7</p>
+        <h3 class="section-heading">Step C — why the agent exact-read three sections</h3>
+        <p>
+          One section says when automation is permitted. That is not enough.
+          The agent also needed the linked approval rule and the rule for what
+          to do when evidence is incomplete or conflicts. Below is the actual
+          content captured by the three exact reads.
+        </p>
+
+        <div class="gateway-role-grid xray-evidence-grid">
+          <article>
+            <span class="gateway-role-number">$75</span>
+            <h4>Automatic bound</h4>
+            <p>“...at most 75 USD, inventory is available, destination is unchanged, fraud risk is low, and no restricted category is involved.”</p>
+            <ul>
+              <li>Gives the value ceiling.</li>
+              <li>Gives the eligibility conditions.</li>
+              <li>Requires idempotency and the release hash.</li>
+            </ul>
+            <code>demo-auto-recovery-bounds</code>
+          </article>
+          <article>
+            <span class="gateway-role-number">HITL</span>
+            <h4>Approval controls</h4>
+            <p>“...human approval for a merchandise refund above 100 USD, a goodwill credit above 25 USD, any destination change, a policy override, restricted merchandise, or ... conflicting or stale decisive evidence.”</p>
+            <ul>
+              <li>Explains when a human checkpoint is mandatory.</li>
+              <li>Says approval cannot bypass command validation.</li>
+            </ul>
+            <code>demo-approval-thresholds</code>
+          </article>
+          <article>
+            <span class="gateway-role-number">1→4</span>
+            <h4>Evidence precedence</h4>
+            <p>“...applicable law first, then the order's seller and item-specific terms, then carrier rules, and finally the synthetic enterprise recovery standard.”</p>
+            <ul>
+              <li>A narrower exception beats a general rule.</li>
+              <li>Missing decisive evidence means abstain or escalate.</li>
+            </ul>
+            <code>demo-evidence-precedence</code>
+          </article>
+        </div>
+
+        <p class="xray-source-note">
+          <strong>Important provenance detail:</strong> all three sections came
+          from <code>commerce-demo-recovery-standard</code>, published by
+          <em>TruvaG3 Capability Demo</em> at
+          <code>urn:truvag3:commerce-demo:recovery-standard:v1</code>. The pack
+          also contains public FTC, eCFR, retailer, USPS, and FedEx material,
+          but this bounded automatic-replacement rule is an explicitly
+          synthetic enterprise policy for the capability demo.
+        </p>
+
+        <p class="xray-evidence-source registry-proof"><span>Stored execution evidence</span> Decoded claims from the exact-read receipt; HMAC signature hidden</p>
+        <h3 class="section-heading">Step D — the receipt proves the read, not the decision</h3>
+
+        <div class="receipt-explainer xray-receipt">
+          <div>
+            <p class="mini-label">Decoded receipt claims</p>
+            <h4>What Commerce Core can verify</h4>
+            <pre><code>{
+  "section_id": "demo-auto-recovery-bounds",
+  "release_id": "commerce-us-2026-08-20",
+  "release_hash": "sha256:49643f...5153d28",
+  "tenant_id": "commerce-demo",
+  "jurisdiction": "US",
+  "channel": "online",
+  "as_of": "2026-08-20T18:00:00Z",
+  "issued_at": "2026-08-27T02:10:39.187521213Z",
+  "expires_at": "2026-08-27T02:40:39.187521213Z"
+}</code></pre>
+          </div>
+          <div>
+            <p class="mini-label">Token anatomy</p>
+            <div class="receipt-token"><span>base64url claims</span><b>.</b><span>HMAC-SHA256</span></div>
+            <p>The 559-character receipt is signed, not encrypted. The reusable signature is redacted here.</p>
+            <ol class="xray-receipt-checks">
+              <li>The left side contains readable JSON claims.</li>
+              <li>The right side is a signature made with a shared control key.</li>
+              <li>Changing a claim makes the signature invalid.</li>
+              <li>The receipt expires after 30 minutes.</li>
+              <li>There must be exactly one valid receipt for every cited section.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="xray-not-decision">
+          <div><strong>The receipt says</strong><p>“This exact section was read from this release, for this tenant and scope, at this decision time, while the receipt was valid.”</p></div>
+          <span aria-hidden="true">≠</span>
+          <div><strong>The receipt does not say</strong><p>“The replacement is allowed.” Only Commerce Core can make that business decision.</p></div>
+        </div>
+
+        <p class="xray-evidence-source registry-proof"><span>Stored execution evidence</span> Registry · step 8 resolved parameters</p>
+        <h3 class="section-heading">Step E — the agent handed the proof to Commerce Core</h3>
+        <p>
+          After all three reads completed, the agent called
+          <code>evaluate_recovery_policy</code>. This is the stored, resolved
+          input from execution step 8. Receipt bodies are abbreviated here, but
+          the real call carried all three complete signed strings.
+        </p>
+
+        <pre><code>{
+  "order_id": "ORD-1003",
+  "option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z",
+  "release_id": "commerce-us-2026-08-20",
+  "release_hash": "sha256:49643f3bb48d35aa04ea786ab1b0205475eadcbfd247cd74cc8c55a4a5153d28",
+  "evidence_section_ids": [
+    "demo-auto-recovery-bounds",
+    "demo-approval-thresholds",
+    "demo-evidence-precedence"
+  ],
+  "evidence_receipts": [
+    "receipt-for-auto-bounds.&lt;signature-redacted&gt;",
+    "receipt-for-approval-thresholds.&lt;signature-redacted&gt;",
+    "receipt-for-evidence-precedence.&lt;signature-redacted&gt;"
+  ]
+}</code></pre>
+
+        <p class="xray-evidence-source code-proof"><span>Implementation + result evidence</span> Commerce Core checks mapped to the step 8 inputs and response</p>
+        <h3 class="section-heading">Step F — Commerce Core checked each condition</h3>
+        <p>
+          The AI did not perform this final comparison. Commerce Core used
+          deterministic Go code. The same inputs always follow the same checks
+          and produce the same result.
+        </p>
+
+        <div class="table-wrap xray-check-table">
+          <table>
+            <thead><tr><th>Check performed by Commerce Core</th><th>Value in this run</th><th>Evidence or state used</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td>Release ID and hash equal the current policy release</td><td><code>commerce-us-2026-08-20</code> + matching SHA-256</td><td>Gateway release and Core's configured release</td><td><span class="xray-pass">Pass</span></td></tr>
+              <tr><td>Every cited section has one valid signed receipt</td><td>3 section IDs + 3 receipts</td><td>Receipt signature, claims, scope, issue and expiry times</td><td><span class="xray-pass">Pass</span></td></tr>
+              <tr><td>Decisive automatic-recovery evidence is present</td><td><code>demo-auto-recovery-bounds</code></td><td>Exact-read section ID</td><td><span class="xray-pass">Pass</span></td></tr>
+              <tr><td>Replacement inventory is available</td><td><code>true</code></td><td>Order version 1</td><td><span class="xray-pass">Pass</span></td></tr>
+              <tr><td>Fraud risk is low</td><td><code>low</code></td><td>Order version 1</td><td><span class="xray-pass">Pass</span></td></tr>
+              <tr><td>Item is not restricted</td><td><code>false</code> for restricted</td><td>Order version 1</td><td><span class="xray-pass">Pass</span></td></tr>
+              <tr><td>Value is within the automatic replacement bound</td><td>$69 ≤ $75</td><td>Order value + policy threshold</td><td><span class="xray-pass">Pass</span></td></tr>
+              <tr><td>Human approval is required</td><td>No threshold or restriction triggered it</td><td>Policy rules + order facts</td><td><span class="xray-pass">No</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="xray-equation" aria-label="The automatic-recovery decision combines valid evidence and all required order conditions.">
+          <span>valid release and receipts</span><b>AND</b><span>inventory available</span><b>AND</b><span>low risk</span><b>AND</b><span>not restricted</span><b>AND</b><span>$69 ≤ $75</span><strong>= ALLOWED</strong>
+        </div>
+
+        <p class="xray-evidence-source combined-proof"><span>Two independent views</span> Stored Registry response on the left · fresh Commerce Core read on the right</p>
+        <h3 class="section-heading">Step G — the stored response and the later direct state agree</h3>
+        <div class="code-pair xray-then-now">
+          <div>
+            <h3>Then: response stored at step 8</h3>
+            <pre><code>{
+  "outcome": "allowed",
+  "eligible": true,
+  "approval_required": false,
+  "order_id": "ORD-1003",
+  "order_version": 1,
+  "option_id": "same-sku-replacement",
+  "decision_token": "automatic.&lt;redacted&gt;",
+  "reasons": [
+    "replacement preconditions and enterprise
+     policy evidence are satisfied"
+  ]
+}</code></pre>
+          </div>
+          <div>
+            <h3>Now: direct read after execution</h3>
+            <pre><code>{
+  "order_id": "ORD-1003",
+  "version": 2,
+  "fulfillment_status": "replacement_created",
+  "recovery": {
+    "option_id": "same-sku-replacement",
+    "status": "completed",
+    "release_id": "commerce-us-2026-08-20"
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <p class="xray-time-warning">
+          <strong>Why we did not call “evaluate” again for proof:</strong> the
+          command already changed the live order from version 1 to version 2
+          and consumed replacement inventory. Re-evaluating the mutated order
+          would be a different experiment. Registry preserves the exact
+          evaluation response from the original state; the direct read proves
+          the expected after-state.
+        </p>
+
+        <div class="gateway-reality-note xray-answer">
+          <strong>Final authority boundary, in one sentence:</strong>
+          <span>The gateway proved what policy was read; the agent carried that proof; Commerce Core verified it, compared it with order version 1, decided <code>allowed</code>, executed once, and produced the verified version 2 state.</span>
+        </div>
+      </section>
+
+      <section id="loaded-data" class="chapter">
+        <p class="chapter-number">X-ray 5</p>
+        <h2>The data the gateway actually has</h2>
+        <p class="lead">
+          The active canonical file is <code>domain-packs/commerce-demo/pack.json</code>.
+          It is 25,967 bytes in this checkout.
+        </p>
+
+        <div class="live-proof-grid">
+          <article><span class="proof-value">7</span><h4>Sources</h4><p>FTC, eCFR, Target, Walmart, USPS, FedEx, and synthetic enterprise policy.</p></article>
+          <article><span class="proof-value">18</span><h4>Sections</h4><p>Stable, scoped, effective-dated units of normalized policy.</p></article>
+          <article><span class="proof-value">14</span><h4>Relations</h4><p>Authored links such as requires, overrides, conflicts, and follows.</p></article>
+          <article><span class="proof-value">23 + 7</span><h4>Aliases + tests</h4><p>Reviewed vocabulary and golden retrieval cases.</p></article>
+        </div>
+
+        <div class="pack-lifecycle" role="img" aria-label="The versioned JSON pack is strictly decoded, validated and hashed, then loaded into an in-memory retrieval view and an embedded Ladybug graph projection.">
+          <div><span>Canonical file</span><strong>pack.json</strong><small>sources · sections · links · tests</small></div>
+          <b aria-hidden="true">→</b>
+          <div><span>Startup checks</span><strong>Decode + validate</strong><small>unknown fields and bad references fail</small></div>
+          <b aria-hidden="true">→</b>
+          <div><span>Immutable identity</span><strong>Canonical SHA-256</strong><small>counts derived from arrays</small></div>
+          <b aria-hidden="true">→</b>
+          <div><span>Runtime views</span><strong>Memory + LadybugDB</strong><small>ranking + graph confirmation</small></div>
+        </div>
+
+        <h3 class="section-heading">What <code>pack.json</code> looks like inside</h3>
+        <p>
+          It is ordinary version-controlled JSON. It does not contain prompts,
+          hidden model knowledge, or a database dump. The example below shows
+          the four kinds of authored data and how their IDs connect. Many fields
+          and records are omitted only to keep the picture readable.
+        </p>
+
+<pre><code>{
+  "domain": "commerce-order-recovery",
+  "tenant_id": "commerce-demo",
+  "release": {
+    "release_id": "commerce-us-2026-08-20",
+    "published_at": "2026-08-20T16:00:00Z"
+  },
+  "sources": [
+    {
+      "source_id": "commerce-demo-recovery-standard",
+      "title": "Commerce Demo Recovery Standard v1",
+      "source_type": "synthetic-enterprise-policy"
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "demo-auto-recovery-bounds",
+      "document_id": "commerce-demo-recovery-standard",
+      "title": "Bounded automatic recovery options",
+      "content": "After eligibility is supported ... at most 75 USD ...",
+      "jurisdiction": "global",
+      "channel": "online",
+      "facts": { "max_auto_merchandise_value_usd": 75 }
+    }
+  ],
+  "relations": [
+    {
+      "from_section_id": "demo-auto-recovery-bounds",
+      "type": "ESCALATES_TO",
+      "to_section_id": "demo-approval-thresholds"
+    }
+  ],
+  "semantic_aliases": {
+    "reship": "replacement",
+    "lost": "missing"
+  }
+}</code></pre>
+
+        <div class="xray-pack-map">
+          <article><code>document_id</code><p>Joins each normalized section to the provenance record whose <code>source_id</code> has the same value.</p></article>
+          <span aria-hidden="true">→</span>
+          <article><code>section_id</code><p>Gives a policy unit a stable address for search, exact read, and citation.</p></article>
+          <span aria-hidden="true">→</span>
+          <article><code>from / to</code><p>Connects two section addresses with a reviewed relation type.</p></article>
+        </div>
+
+        <details class="xray-disclosure">
+          <summary>What happens when the gateway pod starts?</summary>
+          <div class="xray-disclosure-body">
+            <ol class="xray-startup-steps">
+              <li><b>Open:</b> read the selected domain pack from disk.</li>
+              <li><b>Strict decode:</b> reject malformed JSON and unknown fields instead of silently guessing.</li>
+              <li><b>Validate:</b> reject duplicate IDs, broken source references, bad relation endpoints, and invalid release data.</li>
+              <li><b>Hash:</b> calculate the canonical SHA-256 identity used throughout the run.</li>
+              <li><b>Build retrieval view:</b> prepare tokens, aliases, scope metadata, and dates for deterministic filtering and ranking.</li>
+              <li><b>Project graph:</b> load section nodes and typed links into embedded LadybugDB.</li>
+              <li><b>Serve:</b> expose the same four public capabilities to any compliant agent.</li>
+            </ol>
+          </div>
+        </details>
+
+        <div class="code-pair">
+          <div>
+            <h3>Example aliases</h3>
+            <pre><code>{
+  "reship": "replacement",
+  "replace": "replacement",
+  "lost": "missing",
+  "undelivered": "missing",
+  "late": "delay",
+  "approve": "approval"
+}</code></pre>
+          </div>
+          <div>
+            <h3>Example authored relations</h3>
+            <pre><code>auto-recovery-bounds
+  REQUIRES evidence-precedence
+  ESCALATES_TO approval-thresholds
+  FOLLOWED_BY verification-notification</code></pre>
+          </div>
+        </div>
+
+        <div class="reference-links">
+          <a href="../../domain-packs/commerce-demo/pack.json">Open the active pack.json</a>
+          <a href="09-domain-knowledge-gateway-xray.md#5-the-data-actually-loaded-by-the-gateway">Read the complete source list</a>
+        </div>
+      </section>
+
+      <section id="direct-queries" class="chapter">
+        <p class="chapter-number">X-ray 6</p>
+        <h2>Direct operations against the live gateway</h2>
+        <p class="lead">
+          The gateway is internal to the cluster. A temporary port-forward made
+          its capability endpoints available for inspection.
+        </p>
+
+        <pre><code>kubectl port-forward -n truvag3-examples \
+  service/domain-knowledge-gateway-service 8396:80</code></pre>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Direct operation</th><th>Input</th><th>Observed result</th></tr></thead>
+            <tbody>
+              <tr><td><code>get_release_info</code></td><td><code>{}</code></td><td>Commerce release, matching SHA-256, 18 sections, 7 sources</td></tr>
+              <tr><td><code>search_evidence</code></td><td>Same request as the agent</td><td>Same ten candidates in the same order and same eight paths</td></tr>
+              <tr><td><code>traverse_relations</code></td><td>Start at <code>demo-auto-recovery-bounds</code></td><td>Exactly three paths: escalation, prerequisite, and follow-up</td></tr>
+              <tr><td><code>read_exact_section</code></td><td>Correct commerce/US/online scope</td><td>Full section, source, release, and a new 30-minute receipt</td></tr>
+              <tr><td><code>search_evidence</code></td><td>Wrong tenant</td><td>Zero candidates plus a scope/effective-date warning</td></tr>
+              <tr><td><code>read_exact_section</code></td><td>Wrong <code>store</code> channel</td><td>HTTP 404 <code>NOT_FOUND</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="xray-direct-reading">
+          The table is the summary. The panels below show what was actually
+          sent and what came back. You can repeat them while the local Kind
+          cluster is running. Each call is read-only.
+        </p>
+
+        <details class="xray-disclosure xray-operation" open>
+          <summary><span>Direct operation 1</span> Ask which release is active</summary>
+          <div class="xray-disclosure-body">
+            <p><strong>Question in plain English:</strong> “Which frozen policy pack will you use right now?”</p>
+            <div class="code-pair">
+              <div>
+                <h3>HTTP request body</h3>
+                <pre><code>POST /api/capabilities/get_release_info
+
+{}</code></pre>
+              </div>
+              <div>
+                <h3>Observed response data</h3>
+                <pre><code>{
+  "release_id": "commerce-us-2026-08-20",
+  "domain": "commerce-order-recovery",
+  "tenant_id": "commerce-demo",
+  "content_hash": "sha256:49643f...5153d28",
+  "section_count": 18,
+  "source_count": 7
+}</code></pre>
+              </div>
+            </div>
+            <p class="xray-observation"><b>Meaning:</b> this identity and these counts match the stored execution. This call does not return any policy text.</p>
+          </div>
+        </details>
+
+        <details class="xray-disclosure xray-operation" open>
+          <summary><span>Direct operation 2</span> Repeat the agent's scoped search</summary>
+          <div class="xray-disclosure-body">
+            <p><strong>Question in plain English:</strong> “Within this tenant, jurisdiction, channel, and time, which sections should I inspect for a missing-order replacement?”</p>
+            <pre><code>POST /api/capabilities/search_evidence
+{
+  "query": "same-SKU replacement authorization for missing in transit orders: enterprise authority, inventory availability, low fraud risk, restricted merchandise exclusions, value thresholds, and approval requirements",
+  "tenant_id": "commerce-demo",
+  "jurisdiction": "US",
+  "channel": "online",
+  "as_of": "2026-08-20T18:00:00Z",
+  "limit": 20
+}</code></pre>
+            <div class="xray-observed-result">
+              <strong>Observed response</strong>
+              <p>10 candidates in the same order as X-ray 3, 8 one-hop relation paths, no warnings, and the same release hash.</p>
+              <code>#1 auto-recovery-bounds</code>
+              <code>#3 approval-thresholds</code>
+              <code>#5 evidence-precedence</code>
+            </div>
+            <p class="xray-observation"><b>Meaning:</b> the result is reproducible. Ranking is deterministic for the same pack and inputs.</p>
+          </div>
+        </details>
+
+        <details class="xray-disclosure xray-operation">
+          <summary><span>Direct operation 3</span> Ask for only the top section's graph neighbours</summary>
+          <div class="xray-disclosure-body">
+            <div class="code-pair">
+              <div>
+                <h3>Request</h3>
+                <pre><code>POST /api/capabilities/traverse_relations
+{
+  "section_ids": [
+    "demo-auto-recovery-bounds"
+  ],
+  "tenant_id": "commerce-demo",
+  "jurisdiction": "US",
+  "channel": "online",
+  "as_of": "2026-08-20T18:00:00Z"
+}</code></pre>
+              </div>
+              <div>
+                <h3>Observed three paths</h3>
+                <pre><code>auto-recovery-bounds
+  ESCALATES_TO approval-thresholds
+  REQUIRES evidence-precedence
+  FOLLOWED_BY verification-notification</code></pre>
+              </div>
+            </div>
+            <p class="xray-observation"><b>Meaning:</b> the graph does not invent a path. It returns three links explicitly authored in <code>pack.json</code>.</p>
+          </div>
+        </details>
+
+        <details class="xray-disclosure xray-operation">
+          <summary><span>Direct operation 4</span> Exact-read the selected policy section</summary>
+          <div class="xray-disclosure-body">
+            <p>The full request and response are shown in X-ray 4. The repeated direct call returned the same section content, facts, source, release hash, and a newly issued 30-minute receipt.</p>
+            <p class="xray-observation"><b>Meaning:</b> search discovery and policy proof are separate operations. Only this exact read creates the receipt accepted by Commerce Core.</p>
+          </div>
+        </details>
+
+        <details class="xray-disclosure xray-operation">
+          <summary><span>Direct operations 5–6</span> Try the wrong tenant and wrong channel</summary>
+          <div class="xray-disclosure-body">
+            <p>
+              These are deliberate negative probes. They show that scope fields
+              are enforced by the service. The caller cannot search one tenant
+              and then silently read a section through another channel.
+            </p>
+
+        <div class="code-pair">
+          <div>
+            <h3>Wrong tenant search</h3>
+            <pre><code>{
+  "success": true,
+  "data": {
+    "candidates": [],
+    "warnings": [
+      "no evidence matched the requested
+       scope and effective date"
+    ]
+  }
+}</code></pre>
+          </div>
+          <div>
+            <h3>Wrong channel exact read</h3>
+            <pre><code>HTTP 404
+{
+  "success": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "knowledge record not found",
+    "retryable": false
+  }
+}</code></pre>
+          </div>
+        </div>
+
+            <p class="xray-observation"><b>Meaning:</b> the wrong tenant has no matching search space; the wrong channel cannot exact-read this section. “No evidence” is returned as no evidence—not as a best guess.</p>
+          </div>
+        </details>
+
+        <p class="plain-note">
+          Scope is enforced before ranking and again during exact read. The
+          system does not retrieve all policy and ask the LLM to ignore the
+          inapplicable parts.
+        </p>
+      </section>
+
+      <section id="algorithm" class="chapter">
+        <p class="chapter-number">X-ray 7</p>
+        <h2>The exact search algorithm</h2>
+        <p class="lead">There is no LLM, embedding API, or vector database inside this search path.</p>
+
+        <ol class="gateway-search-pipeline xray-pipeline">
+          <li><span>1</span><div><strong>Validate</strong><p>Require query, tenant, jurisdiction, channel, and RFC3339 decision time.</p></div></li>
+          <li><span>2</span><div><strong>Hard-filter</strong><p>Remove the wrong release, tenant, jurisdiction, channel, effective date, and optional tags.</p></div></li>
+          <li><span>3</span><div><strong>Lexical rank</strong><p>BM25-style scoring over title, content, and tags, with a reviewed priority boost.</p></div></li>
+          <li><span>4</span><div><strong>Alias-vector rank</strong><p>Reviewed aliases plus terms and bigrams hashed into 128 buckets; cosine similarity.</p></div></li>
+          <li><span>5</span><div><strong>Fuse</strong><p>Reciprocal-rank fusion with <code>k=60</code>; named-source preference when applicable.</p></div></li>
+          <li><span>6</span><div><strong>Attach graph clues</strong><p>At most twenty authored one-hop paths from the ranked sections.</p></div></li>
+        </ol>
+
+        <div class="ranking-lanes">
+          <article class="lexical-lane">
+            <p class="mini-label">Lane A</p>
+            <h5>BM25-style lexical ranking</h5>
+            <p>Good for exact domain terms such as “same-SKU,” “inventory,” “restricted,” and “approval.”</p>
+          </article>
+          <div class="ranking-merge"><span>rank</span><strong>＋</strong><span>rank</span><b>↓</b><em>RRF</em></div>
+          <article class="semantic-lane">
+            <p class="mini-label">Lane B</p>
+            <h5>Deterministic alias-aware similarity</h5>
+            <p>Connects reviewed vocabulary such as “reship” and “replacement,” but cannot discover unseen domain meaning.</p>
+          </article>
+        </div>
+
+        <div class="gateway-reality-note xray-answer">
+          <strong>Read the score correctly:</strong>
+          <span><code>0.032522</code> is a reciprocal-rank fusion value. It is not 3.25% confidence, not a correctness probability, and not permission to act.</span>
+        </div>
+
+        <details class="xray-disclosure" open>
+          <summary>Worked example: follow one query through all six stages</summary>
+          <div class="xray-disclosure-body">
+            <ol class="xray-worked-search">
+              <li><b>Input arrives:</b> “same-SKU replacement ...” plus <code>commerce-demo / US / online / 2026-08-20T18:00:00Z</code>.</li>
+              <li><b>Hard scope runs first:</b> sections for another tenant, another jurisdiction, a store-only channel, or the wrong effective date are removed before scores matter.</li>
+              <li><b>Lexical lane notices:</b> exact words such as <em>replacement</em>, <em>inventory</em>, <em>fraud</em>, <em>restricted</em>, and <em>approval</em>.</li>
+              <li><b>Alias lane expands reviewed vocabulary:</b> for example, <em>reship</em> is treated like <em>replacement</em> and <em>lost</em> like <em>missing</em>.</li>
+              <li><b>RRF combines positions:</b> a section ranked well in both lists moves near the top. It does not convert rank into probability.</li>
+              <li><b>Graph clues are attached:</b> the top section points to approval, precedence, and follow-up sections that humans already linked in the pack.</li>
+            </ol>
+            <p class="xray-observation"><b>Result:</b> <code>demo-auto-recovery-bounds</code> ranked first. The agent then used its relation clues to exact-read the approval and precedence sections too.</p>
+          </div>
+        </details>
+      </section>
+
+      <section id="ladybug-role" class="chapter">
+        <p class="chapter-number">X-ray 8</p>
+        <h2>LadybugDB without the mystery</h2>
+        <div class="ladybug-truth">
+          <div class="ladybug-heading">
+            <p class="mini-label">Embedded in the gateway pod</p>
+            <h4>A disposable graph projection, not the canonical corpus</h4>
+            <p>The JSON pack remains authoritative and can rebuild the graph whenever the pod starts.</p>
+          </div>
+          <div class="ladybug-columns">
+            <article>
+              <h5>In-memory reference store</h5>
+              <ul>
+                <li>Applies hard scope and date filters.</li>
+                <li>Runs lexical and alias-vector ranking.</li>
+                <li>Calculates allowed traversal paths.</li>
+                <li>Returns the exact section and source.</li>
+              </ul>
+            </article>
+            <article>
+              <h5>LadybugDB projection</h5>
+              <ul>
+                <li>Stores section nodes and typed links.</li>
+                <li>Confirms an exact-read node exists.</li>
+                <li>Confirms allowed edge triples exist.</li>
+                <li>Uses 128 MB buffer and two threads in this demo.</li>
+              </ul>
+            </article>
+          </div>
+          <p class="ladybug-adapter-note">
+            Both are behind the provider-neutral <code>KnowledgeStore</code>
+            interface. Replacing LadybugDB with Neo4j should change the adapter,
+            not the public gateway API or the agent plan.
+          </p>
+        </div>
+
+        <div class="xray-ladybug-example">
+          <div>
+            <p class="mini-label">Canonical record in JSON</p>
+            <pre><code>{
+  "from_section_id": "demo-auto-recovery-bounds",
+  "type": "ESCALATES_TO",
+  "to_section_id": "demo-approval-thresholds"
+}</code></pre>
+          </div>
+          <span aria-hidden="true">projects to</span>
+          <div>
+            <p class="mini-label">Disposable graph shape</p>
+            <pre><code>(auto-recovery-bounds)
+  -[ESCALATES_TO]-&gt;
+(approval-thresholds)</code></pre>
+          </div>
+        </div>
+
+        <p class="plain-note">
+          If the embedded graph disappears, the pod can rebuild it from the
+          JSON pack. If the JSON pack changes, it becomes a different release
+          hash. This is why LadybugDB is useful without becoming the source of
+          truth.
+        </p>
+      </section>
+
+      <section id="large-corpus" class="chapter">
+        <p class="chapter-number">X-ray 9</p>
+        <h2>What changes for a large real-world corpus?</h2>
+        <p class="lead">
+          This pack is about 26 KB. The earlier 2–10 MB figure is neither a
+          requirement nor a realistic ceiling for enterprise knowledge.
+        </p>
+
+        <div class="reuse-diagram" role="img" aria-label="Large source collections pass through offline ingestion, normalization, metadata, indexing, graph construction and release evaluation before the same gateway API serves bounded evidence to agents.">
+          <div><span>Large raw corpus</span><strong>PDF · HTML · tickets · policy</strong></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Offline foundry</span><strong>Parse · OCR · normalize</strong></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Governed release</span><strong>Sections · metadata · links</strong></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Production adapters</span><strong>Search · vector · graph</strong></div>
+          <span aria-hidden="true">→</span>
+          <div><span>Stable public contract</span><strong>Same four capabilities</strong></div>
+        </div>
+
+        <div class="candidate-evidence-split">
+          <article>
+            <p class="mini-label">Can remain stable</p>
+            <h4>The agent-facing contract</h4>
+            <p>Release lookup, scoped search, bounded relation traversal, exact section read, provenance, and evidence receipts.</p>
+          </article>
+          <div class="candidate-arrow" aria-hidden="true"><span>implementation</span><strong>↔</strong><span>contract</span></div>
+          <article>
+            <p class="mini-label">Must grow</p>
+            <h4>The knowledge-foundry backend</h4>
+            <p>Document acquisition, OCR, normalization, metadata quality, production indexing, conflict curation, evaluation, and release operations.</p>
+          </article>
+        </div>
+
+        <p class="plain-note">
+          Accuracy depends more on corpus coverage, section quality, metadata,
+          precedence, conflict handling, and golden-case evaluation than on the
+          graph database brand.
+        </p>
+      </section>
+
+      <section class="chapter continue-reading">
+        <h2>The root-level conclusion</h2>
+        <p>
+          The gateway is not an intelligent policy judge. It is a controlled
+          evidence boundary. The AI decides what to investigate. The gateway
+          deterministically filters, ranks, connects, and proves policy. Commerce
+          Core verifies that proof and owns the business decision and mutation.
+        </p>
+        <div class="reference-links">
+          <a href="09-domain-knowledge-gateway-xray.md">Full X-ray reference</a>
+          <a href="index.html">Main illustrated tutorial</a>
+          <a href="08-observability.md">Live observability guide</a>
+          <a href="../../domain-packs/commerce-demo/pack.json">Active commerce pack</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <p>Domain Knowledge Gateway X-ray · Agentic Commerce Control Tower capability demo</p>
+    <p>Live evidence captured from the local Kind cluster on August 26, 2026 CDT. Signed HMAC segments are intentionally redacted.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-denied-option-001",
+  "order_id": "ORD-1005",
+  "signal": "missing lithium-battery order is restricted from replacement",
+  "requested_outcome": "evaluate the requested option and stop on deterministic denial",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z"
+}

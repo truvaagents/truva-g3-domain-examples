@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0",
+  "domain": "it-access-governance",
+  "tenant_id": "it-demo",
+  "release": {
+    "release_id": "it-access-2026-08-20",
+    "published_at": "2026-08-20T16:00:00Z",
+    "valid_from": "2026-08-20T00:00:00Z",
+    "valid_to": "0001-01-01T00:00:00Z",
+    "content_hash": "",
+    "section_count": 0,
+    "source_count": 0
+  },
+  "semantic_aliases": {
+    "departed": "termination",
+    "departing": "termination",
+    "employee": "user",
+    "worker": "user",
+    "remove": "revoke",
+    "removed": "revoke",
+    "revocation": "revoke",
+    "deadline": "sla"
+  },
+  "sources": [
+    {
+      "source_id": "it-demo-access-standard",
+      "title": "IT Access Demo Standard v1",
+      "publisher": "TruvaG3 Capability Demo",
+      "url": "urn:truvag3:it-demo:access-standard:v1",
+      "source_type": "synthetic-enterprise-policy",
+      "retrieved_at": "2026-08-20T15:00:00Z",
+      "extraction_method": "authored-for-conformance-test",
+      "license_note": "Synthetic policy used only to prove that the gateway contract is not commerce-specific."
+    },
+    {
+      "source_id": "it-demo-offboarding-runbook",
+      "title": "IT Offboarding Demo Runbook v1",
+      "publisher": "TruvaG3 Capability Demo",
+      "url": "urn:truvag3:it-demo:offboarding-runbook:v1",
+      "source_type": "synthetic-procedure",
+      "retrieved_at": "2026-08-20T15:05:00Z",
+      "extraction_method": "authored-for-conformance-test",
+      "license_note": "Synthetic procedure used only for domain-pack conformance testing."
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "privileged-access-approval",
+      "document_id": "it-demo-access-standard",
+      "title": "Privileged access requires independent approval",
+      "content": "A request for privileged production access requires approval from the system owner and an approver who is independent of the requester. Emergency access expires after four hours.",
+      "jurisdiction": "global",
+      "channel": "internal",
+      "effective_from": "2026-08-20T00:00:00Z",
+      "effective_to": "0001-01-01T00:00:00Z",
+      "priority": 100,
+      "tags": ["privileged-access", "approval", "production"],
+      "facts": {"independent_approval": true, "emergency_access_hours": 4}
+    },
+    {
+      "section_id": "departed-user-revocation",
+      "document_id": "it-demo-access-standard",
+      "title": "Departed user access revocation",
+      "content": "Interactive and privileged access for a departed user must be revoked within thirty minutes of the authoritative termination event.",
+      "jurisdiction": "global",
+      "channel": "internal",
+      "effective_from": "2026-08-20T00:00:00Z",
+      "effective_to": "0001-01-01T00:00:00Z",
+      "priority": 100,
+      "tags": ["offboarding", "revocation", "termination"],
+      "facts": {"revocation_sla_minutes": 30}
+    },
+    {
+      "section_id": "offboarding-verification",
+      "document_id": "it-demo-offboarding-runbook",
+      "title": "Verify offboarding completion",
+      "content": "After revocation, query the identity provider and each privileged target. Close the task only when all sessions are invalid and the evidence references the termination event.",
+      "jurisdiction": "global",
+      "channel": "internal",
+      "effective_from": "2026-08-20T00:00:00Z",
+      "effective_to": "0001-01-01T00:00:00Z",
+      "priority": 90,
+      "tags": ["offboarding", "verification", "identity"],
+      "facts": {"verify_all_sessions_invalid": true}
+    }
+  ],
+  "relations": [
+    {
+      "from_section_id": "departed-user-revocation",
+      "type": "IMPLEMENTED_BY",
+      "to_section_id": "offboarding-verification"
+    }
+  ],
+  "golden_cases": [
+    {
+      "case_id": "departed-user-access",
+      "query": "how quickly must a departed employee access be revoked",
+      "as_of": "2026-08-20T18:00:00Z",
+      "jurisdiction": "global",
+      "channel": "internal",
+      "expected_section_ids": ["departed-user-revocation"],
+      "forbidden_section_ids": ["privileged-access-approval"]
+    }
+  ]
+}

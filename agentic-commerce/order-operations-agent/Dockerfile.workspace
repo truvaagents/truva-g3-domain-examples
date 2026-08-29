@@ -1,0 +1,23 @@
+FROM golang:1.26.6-alpine AS builder
+RUN apk add --no-cache ca-certificates gcc git make musl-dev
+WORKDIR /workspace
+COPY truva-g3/ai/ ./truva-g3/ai/
+COPY truva-g3/core/ ./truva-g3/core/
+COPY truva-g3/orchestration/ ./truva-g3/orchestration/
+COPY truva-g3/resilience/ ./truva-g3/resilience/
+COPY truva-g3/telemetry/ ./truva-g3/telemetry/
+COPY truva-g3-domain-examples/agentic-commerce/order-operations-agent/ ./truva-g3-domain-examples/agentic-commerce/order-operations-agent/
+WORKDIR /workspace/truva-g3-domain-examples/agentic-commerce/order-operations-agent
+ENV GOWORK=off CGO_ENABLED=0 GOOS=linux
+RUN go mod download && go mod verify
+ARG TARGETARCH
+RUN go build -trimpath -ldflags="-s -w" -o /out/order-operations-agent .
+
+FROM alpine:3.23
+RUN apk add --no-cache ca-certificates tzdata && addgroup -S -g 1001 app && adduser -S -u 1001 -G app app
+WORKDIR /app
+COPY --from=builder /out/order-operations-agent ./order-operations-agent
+USER 1001:1001
+ENV PORT=8394
+EXPOSE 8394
+ENTRYPOINT ["./order-operations-agent"]

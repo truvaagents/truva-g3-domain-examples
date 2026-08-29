@@ -1,0 +1,36 @@
+{
+  "display_name": "Evidence-Grounded Order Recovery",
+  "description": "Use for a synthetic commerce order with a late, missing, failed, or return-related fulfillment signal that needs policy-grounded recovery, governed execution, verification, and notification.",
+  "domains": ["order-operations", "commerce"],
+  "tags": ["orders", "fulfillment", "policy", "recovery", "hitl"],
+  "planning_instructions": [
+    "Read get_order_context and list_fulfillment_options first. Treat their current order version and bounded option IDs as authoritative.",
+    "When the request supplies an operator-constrained option ID, evaluate only that option. Do not substitute a different recovery after a denied, insufficient-evidence, or conflicting-evidence result.",
+    "Search the domain knowledge gateway with the order tenant, jurisdiction, event decision_time, and the channel to which the requested option's governing evidence applies. Scope by the decision being made, not by incidental words in the trigger: use the order interaction channel from get_order_context for same-sku-replacement, refund-merchandise, cancel-and-refund, and wait-for-current-fulfillment; use shipping only for carrier-service-claim. For a replacement query, seek enterprise replacement authorization, inventory/risk bounds, restrictions, and approval thresholds; do not substitute carrier postage-refund rules. Sections marked all or global remain eligible in either search. Omit optional tags during initial discovery unless their controlled values came from a prior gateway result; if used, tags are OR-match filters. Use the identical chosen scope and time for every exact decisive-section read; keep each evidence_receipt with its section ID, release ID, and content hash.",
+    "Use relation traversal when a retrieved section points to an exception, prerequisite, authority, implementing procedure, or conflict. A narrower applicable exception overrides a general section. When equally applicable sections are connected by CONFLICTS_WITH and no reviewed precedence relation resolves them, exact-read and cite both so the deterministic evaluator can classify conflicting_evidence.",
+    "Pass the shared decision_time, paired retrieved exact section IDs and signed evidence receipts, release ID, and release hash to evaluate_recovery_policy. Call it even when scoped order facts appear incomplete; it owns the auditable terminal classification. Never leave a documented required parameter empty: bind order_id from get_order_context and option_id from the operator constraint. Once the decisive section IDs are known, place their exact reads and evaluate_recovery_policy in the same continuation phase by making evaluation depend directly on every exact-read step and referencing their receipts. If evaluation is the last step in a phase, set terminal=false so the next phase can branch on its actual deterministic outcome.",
+    "Never execute an ineligible decision. Use the returned decision_token and a stable idempotency key composed from order ID, option ID, and evaluated order version.",
+    "For allowed, call execute_recovery_command with the returned token and stable idempotency key. For approval_required, also call execute_recovery_command with the token and idempotency key but omit approval_reference and approval_proof: the framework intercepts that sensitive step and creates the HITL checkpoint before HTTP dispatch. An approval_required evaluation is not itself a checkpoint and must not be reported as pending approval unless execution was interrupted. Never fabricate approval_reference or approval_proof; the runtime injects them only after checkpoint approval. The execution phase must never contain execute alone: in that same plan, add verify_order_outcome depending directly on execute, then send_synthetic_notification depending directly on both execute and verify. Every step that references another step's output must name that source step directly in depends_on, even when another dependency already provides a transitive path. This full downstream chain is persisted in the HITL checkpoint and resumes together. Do not claim completion unless verification returned verified=true.",
+    "Treat evaluate_recovery_policy.outcome as authoritative. For denied, insufficient_evidence, or conflicting_evidence, do not call execute_recovery_command; abstain and report the exact outcome and reasons. If evidence is missing, conflicting, stale, or filtered out, never invent policy."
+  ],
+  "response_instructions": [
+    "Report observed order state, exact evidence section IDs with source URLs and release hash, deterministic policy outcome and reasons, approval status, command reference, verification, and notification reference.",
+    "Do not describe a pending approval, transport success, or unverified state as a completed recovery."
+  ],
+  "tool_hints": [
+    "Use commerce-core for order state, options, deterministic evaluation, execution, verification, and synthetic notification.",
+    "Use domain-knowledge-gateway for hybrid search, relation traversal, exact reads, and release provenance."
+  ],
+  "activation_examples": {
+    "should_activate": [
+      "Recover order ORD-1003 after a missing in transit signal",
+      "Determine whether a day-35 electronics return is eligible",
+      "Handle a missed promised ship date without customer consent"
+    ],
+    "should_not_activate": [
+      "Plan a vacation",
+      "Debug a Kubernetes deployment"
+    ]
+  },
+  "change_reason": "Require scoped exact-read receipts, runtime approval proof, deterministic revalidation, and action-specific verification"
+}

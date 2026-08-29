@@ -1,0 +1,13 @@
+{
+  "release_id": "commerce-us-2026-08-20-policy-change",
+  "content_hash": "sha256:460d1f0d7f89d2a649c7a94103ef9ba48f2474fca7f84ad50533d9eec48c2159",
+  "section_ids": [
+    "demo-auto-recovery-bounds",
+    "demo-approval-thresholds",
+    "demo-verification-notification"
+  ],
+  "rules": {
+    "refund_approval_over_usd": 100,
+    "replacement_approval_over_usd": 300
+  }
+}

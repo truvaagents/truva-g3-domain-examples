@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-insufficient-evidence-001",
+  "order_id": "ORD-1004",
+  "signal": "FedEx shipment is missing but payer, lane, ship-date, and exclusion facts are unavailable",
+  "requested_outcome": "classify the requested carrier claim from available evidence without guessing",
+  "requested_option_id": "carrier-service-claim",
+  "decision_time": "2026-08-20T18:00:00Z"
+}

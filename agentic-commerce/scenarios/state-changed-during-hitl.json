@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-state-changed-hitl-001",
+  "order_id": "ORD-1004",
+  "signal": "high-value missing shipment requires a replacement decision",
+  "requested_outcome": "pause for approval, then revalidate current inventory and order version",
+  "requested_option_id": "same-sku-replacement",
+  "decision_time": "2026-08-20T18:00:00Z"
+}

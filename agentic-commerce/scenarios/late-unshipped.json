@@ -1,0 +1,8 @@
+{
+  "event_id": "demo-late-unshipped-001",
+  "order_id": "ORD-1001",
+  "signal": "promised ship date missed and customer did not consent to delay",
+  "requested_outcome": "apply the safest policy-supported recovery",
+  "requested_option_id": "cancel-and-refund",
+  "decision_time": "2026-08-20T18:00:00Z"
+}
