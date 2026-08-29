@@ -200,6 +200,6 @@ the local Kind environment. They do not prove production scalability, complete
 policy coverage, legal correctness, durable recovery after every infrastructure
 failure, or the deferred Registry Viewer fixes.
 
-Return to the [tutorial index](README.md), or continue with the
-[implementation plan](../../../solution-blueprints/AGENTIC_COMMERCE_IMPLEMENTATION_PLAN.md)
-for the production-shaped work that remains deliberately deferred.
+Return to the [tutorial index](README.md), or review the
+[runnable example boundaries](../../README.md) for the production-shaped work
+that remains deliberately deferred.

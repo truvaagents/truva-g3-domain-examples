@@ -61,9 +61,10 @@ define a new TruvaG3 framework contract. The linked runnable slice deliberately
 labels which broader ingestion, persistence, evaluation, security, and
 production-operability requirements remain outside the capability demo.
 
-The executable delivery sequence, planned application contracts, fixed
-scenarios, and release gates are specified separately in the
-[Agentic Commerce Implementation Plan](AGENTIC_COMMERCE_IMPLEMENTATION_PLAN.md).
+The [runnable example](../agentic-commerce/), its
+[capability contracts](../agentic-commerce/contracts/tool-capabilities.md), and
+[scenario assertions](../agentic-commerce/scenarios/expected-results.json) are
+authoritative for the implemented scope.
 
 ## 2. Executive Summary
 
@@ -1470,12 +1471,10 @@ fault-injection controls as production patterns.
 
 ## 19. Implementation Phases
 
-The phases below summarize the architectural sequence. The
-[Agentic Commerce Implementation Plan](AGENTIC_COMMERCE_IMPLEMENTATION_PLAN.md)
-is the execution source of truth for milestone dependencies, planned
-application contracts, scenario fixtures, evaluation thresholds, setup
-commands, and definition of done. It preserves this blueprint's boundaries and
-must be updated when implementation evidence changes a material decision.
+The phases below preserve the architectural sequence. They are historical
+design guidance, not the execution source of truth. Current behavior is
+authoritative in the [runnable example](../agentic-commerce/), its capability
+contracts, scenario assertions, and tests.
 
 ### Phase 0: Validate the slice
 

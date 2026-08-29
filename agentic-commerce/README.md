@@ -7,9 +7,9 @@ enforcement, idempotent synthetic action, verification, and HITL without
 pretending to be a production commerce platform.
 
 The source proposal and preserved research are in
-[`AGENTIC_COMMERCE_CONTROL_TOWER.md`](../solution-blueprints/AGENTIC_COMMERCE_CONTROL_TOWER.md),
-with the executable scope in
-[`AGENTIC_COMMERCE_IMPLEMENTATION_PLAN.md`](../solution-blueprints/AGENTIC_COMMERCE_IMPLEMENTATION_PLAN.md).
+[`AGENTIC_COMMERCE_CONTROL_TOWER.md`](../solution-blueprints/AGENTIC_COMMERCE_CONTROL_TOWER.md).
+This README, the checked-in capability contracts, and the scenario assertions
+describe the current executable scope.
 
 For a progressive, plain-English explanation of the concept, components,
 scenario behavior, live runs, and evidence, start with the

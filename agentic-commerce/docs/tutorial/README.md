@@ -75,7 +75,6 @@ This tutorial is an explanation layer. The implementation remains authoritative:
 - [Tool capability contracts](../../contracts/tool-capabilities.md)
 - [Scenario assertion manifest](../../scenarios/expected-results.json)
 - [Manual scenario runbook](../../scenarios/README.md)
-- [Implementation plan](../../../solution-blueprints/AGENTIC_COMMERCE_IMPLEMENTATION_PLAN.md)
 - [Original proposal and preserved research](../../../solution-blueprints/AGENTIC_COMMERCE_CONTROL_TOWER.md)
 - [Detailed observability audit](../audits/OBSERVABILITY_AUDIT_AGENTIC_COMMERCE_2026-08-21.md)
 

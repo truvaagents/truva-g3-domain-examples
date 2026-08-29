@@ -35,8 +35,8 @@ its own `setup.sh`.
 |---|---|---|
 | [Agentic Commerce Control Tower](agentic-commerce/) | Evidence-grounded order recovery with deterministic enforcement, HITL, and a domain-neutral knowledge gateway | `cd agentic-commerce && ./setup.sh deploy` |
 
-The original proposal, implementation plan, and supporting knowledge-foundry
-research are preserved under [solution-blueprints](solution-blueprints/).
+The original proposal and supporting knowledge-foundry research are preserved
+under [solution-blueprints](solution-blueprints/).
 
 ## Port registry
 
@@ -58,7 +58,7 @@ Prometheus, Grafana, ingress, and the Skills API—remain owned by the sibling
 ```text
 truva-g3-domain-examples/
 ├── agentic-commerce/       # runnable multi-service capability demo
-├── solution-blueprints/    # preserved research and implementation plans
+├── solution-blueprints/    # preserved architecture and research blueprints
 ├── AGENTS.md               # coding-assistant rules for this repository
 ├── .gitignore
 └── README.md
