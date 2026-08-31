@@ -260,7 +260,7 @@
     const output = document.getElementById("workflow-output");
     const why = document.getElementById("workflow-why");
 
-    function selectStep(index) {
+    function selectStep(index, revealStep = true) {
       selected = Math.max(0, Math.min(workflow.length - 1, index));
       const step = workflow[selected];
       actor.textContent = step.actor;
@@ -275,7 +275,9 @@
       });
       previous.disabled = selected === 0;
       next.disabled = selected === workflow.length - 1;
-      buttons[selected].scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (revealStep) {
+        buttons[selected].scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
     }
 
     buttons.forEach((button) => {
@@ -283,7 +285,7 @@
     });
     previous.addEventListener("click", () => selectStep(selected - 1));
     next.addEventListener("click", () => selectStep(selected + 1));
-    selectStep(0);
+    selectStep(0, false);
   }
 
   function initialiseScenarios() {
