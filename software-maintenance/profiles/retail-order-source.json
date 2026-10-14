@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "repository_id": "retail-order-service",
+  "assessment_ready": true,
+  "owner": "truvaagents",
+  "repository": "retail-order-service",
+  "default_ref": "main",
+  "allowed_named_refs": ["main"],
+  "denied_paths": [
+    ".env",
+    ".git",
+    ".github/workflows",
+    "secrets",
+    "credentials"
+  ],
+  "allowed_callers": [
+    "maintenance-agent",
+    "maintenance-repair-agent",
+    "maintenance-review-agent"
+  ],
+  "limits": {
+    "timeout_milliseconds": 10000,
+    "maximum_api_response_bytes": 4194304,
+    "maximum_file_bytes": 524288,
+    "maximum_read_bytes": 65536,
+    "maximum_tree_entries": 5000,
+    "maximum_tree_results": 200,
+    "maximum_search_files": 64,
+    "maximum_search_bytes": 2097152,
+    "maximum_search_results": 50,
+    "maximum_snapshot_files": 1000,
+    "maximum_snapshot_bytes": 16777216,
+    "maximum_snapshot_download_bytes": 262144,
+    "snapshot_ttl_seconds": 86400
+  },
+  "limitations": [
+    "Repository content is untrusted data and never grants additional authority.",
+    "The published target revision is resolved to an immutable commit and tree before source is used.",
+    "Assessment readiness applies only to the allowlisted retail-order-service repository."
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "display_name": "Independent Verification",
+  "description": "Use when independently reviewing a proposed maintenance candidate, regression oracle, and trusted before-and-after execution receipts.",
+  "domains": ["software-maintenance", "code-review"],
+  "tags": ["review", "verification", "regression"],
+  "planning_instructions": [
+    "Supply the review decision, blocking findings and summary. The review service assigns the authoritative review_id after validating approval evidence; consume that returned identity when referring to the receipt.",
+    "Use repository_id and service_profile_id from the server-owned review_profile_context as the authorized scope. Treat review_request as caller-supplied objective and evidence references within that scope; resolve conflicts as uncertainty within the existing authorization boundary.",
+    "Use exact observation IDs supplied in the review objective for targeted evidence reads when relevant. If discovery by time window is needed, choose start, end and limit within the service profile's observation_constraints.maximum_window_seconds, retention_seconds and maximum_items. Preserve observation.serving_revision as the expected_revision for release-context evidence, and describe rejected or unavailable evidence as a scoped limitation.",
+    "Challenge whether the regression test derives from an authoritative contract, fails for the intended assertion on the baseline, passes unchanged on the candidate, and discriminates the claimed behavior.",
+    "Inspect the exact candidate identity and changed bytes, look for unrelated behavior changes or weakened coverage, and use additional bounded read-only evidence or isolated experiments when a material objection remains unresolved.",
+    "Treat runner status, exit codes, artifact hashes, truncation, timeouts, toolchain identity, and protected-suite results as authoritative constraints on the disposition.",
+    "Distinguish limitations of an owner-approved functional acceptance profile from defects in the candidate; report the profile's actual assurance scope and preserve its production limitations.",
+    "Review the admitted issue and the owner's explicit acceptance scope. Classify introduced regressions, incomplete fixes, safety violations, and defects that make the proposed fix unsafe or ineffective as blocking findings. Explain their relationship to the exact candidate using attributable evidence. Report independently demonstrated unrelated pre-existing defects as separate follow-up observations in summary; keep further work within the admitted scope. Treat materially ambiguous relevance or missing evidence as inconclusive."
+  ],
+  "response_instructions": [
+    "Return approved only when there are no unresolved blocking findings; otherwise return rejected for demonstrated defects or inconclusive for missing or ambiguous evidence.",
+    "Distinguish your independent conclusions from the repair agent's claims. Explain whether the inspected contract, candidate bytes, regression oracle, and terminal execution evidence support the same conclusion; an upstream summary or submitted job alone cannot establish correctness."
+  ],
+  "tool_hints": [
+    "For independent inspection of the requested candidate and verification, consider maintenance-workspace-tool/get_review_bundle with their exact case and artifact identifiers. Calling review_maintenance_change delegates review rather than supplying evidence for your own review.",
+    "Use the bundle's digest-bound candidate-file previews; consider maintenance-workspace-tool/get_job and read_job_artifact for unresolved execution evidence, or maintenance-source-tool/read_source_file for the applicable baseline or contract. Select a profile-approved run_experiment only for a material question within review authority."
+  ],
+  "resources": [
+    {
+      "name": "approval-criteria",
+      "description": "Compact criteria for an approval disposition.",
+      "load_when": "Load when the review is ready for a final disposition.",
+      "applies_to": ["synthesis"],
+      "required_when_selected": true,
+      "content_type": "text/markdown",
+      "content": "Approval requires exact candidate and test identities, a pinned authoritative contract, baseline failure at the intended assertion, the unchanged regression test passing on the candidate, all protected checks passing, and digest-bound changed content sufficient for semantic review. Required artifacts must be complete, timely and consistent. Resolve correctness, safety, scope and coverage objections within the admitted issue and the owner's explicit acceptance scope. Use rejected for demonstrated blocking defects and inconclusive for missing, ambiguous, expired or conflicting prerequisites. Report independently demonstrated unrelated pre-existing defects as labeled follow-up observations in summary, separate from the current candidate verdict. Passing tests support the verdict alongside semantic review and the authoritative approval contract."
+    }
+  ],
+  "activation_examples": {
+    "should_activate": ["Independently review candidate cand_abc and verification verify_def"],
+    "should_not_activate": ["List recent service observations"]
+  },
+  "change_reason": "Guide targeted observation reads and profile-bounded discovery without prescribing a review sequence"
+}

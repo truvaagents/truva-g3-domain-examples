@@ -1,0 +1,16 @@
+/bin/
+/maintenance-evidence-tool
+/maintenance-agent
+/tools/maintenance-workspace-tool/maintenance-workspace-tool
+/notes/
+.env
+.env.*
+.env-migration.*/
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+/bugs/
+/papers/
+.DS_Store
+**/.DS_Store

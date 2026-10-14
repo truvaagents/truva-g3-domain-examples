@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: maintenance-assessment-tool
+  namespace: software-maintenance
+  labels:
+    app: maintenance-assessment-tool
+    component: tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  selector:
+    app: maintenance-assessment-tool
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8404
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maintenance-assessment-tool
+  namespace: software-maintenance
+  labels:
+    app: maintenance-assessment-tool
+    component: tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maintenance-assessment-tool
+  template:
+    metadata:
+      labels:
+        app: maintenance-assessment-tool
+        component: tool
+        app.kubernetes.io/part-of: software-maintenance
+    spec:
+      automountServiceAccountToken: false
+      # Allow the existing 30s HTTP drain plus the 5s telemetry flush to finish.
+      terminationGracePeriodSeconds: 40
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: maintenance-assessment-tool
+          image: maintenance-assessment-tool:latest
+          imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8404
+          envFrom:
+            - configMapRef:
+                name: maintenance-assessment-tool-env-config
+          env:
+            - name: PORT
+              value: "8404"
+            - name: NAMESPACE
+              value: software-maintenance
+            - name: REDIS_URL
+              value: redis://redis.truvag3-examples:6379/0
+            - name: TRUVAG3_REDIS_NAMESPACE
+              value: default
+            - name: TRUVAG3_DISCOVERY_RETRY
+              value: "true"
+            - name: TRUVAG3_DISCOVERY_RETRY_INTERVAL
+              value: 30s
+            - name: TRUVAG3_K8S_SERVICE_NAME
+              value: maintenance-assessment-tool
+            - name: TRUVAG3_K8S_SERVICE_PORT
+              value: "80"
+            - name: TRUVAG3_K8S_POD_APP_LABEL
+              value: maintenance-assessment-tool
+            - name: TRUVAG3_K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: TRUVAG3_K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MAINTENANCE_EVIDENCE_PROFILES_FILE
+              value: /app/profiles/retail-order-service.json
+            - name: MAINTENANCE_ASSESSMENT_PROFILE_FILE
+              value: /app/profiles/retail-order-maintenance.json
+            - name: MAINTENANCE_AGENT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: maintenance-assessment-tool-secrets
+                  key: MAINTENANCE_AGENT_API_TOKEN
+            - name: MAINTENANCE_AGENT_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: maintenance-assessment-tool-secrets
+                  key: MAINTENANCE_AGENT_SERVICE_TOKEN
+            - name: APP_ENV
+              value: development
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.truvag3-examples:4318
+          resources:
+            requests:
+              cpu: 25m
+              memory: 48Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/capabilities
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: maintenance-assessment-tool
+  namespace: software-maintenance
+  labels:
+    app: maintenance-assessment-tool
+    component: tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: maintenance-assessment-tool.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: maintenance-assessment-tool
+                port:
+                  number: 80

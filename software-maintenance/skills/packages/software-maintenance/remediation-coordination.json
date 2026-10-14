@@ -1,0 +1,57 @@
+{
+  "display_name": "Adaptive Remediation Coordination",
+  "description": "Use when evidence may warrant moving from software-maintenance assessment to a candidate change, independent review, or owner-authorized draft publication.",
+  "domains": ["software-maintenance", "change-coordination"],
+  "tags": ["remediation", "delegation", "review", "draft-pr"],
+  "planning_instructions": [
+	"Before seeking new draft publication, establish whether applicable work already exists using discovered repository PR reads. list_open_remediations finds open work independently of memory and assessment history; get_remediation_changes provides current base/head, file changes and bounded patches for comparison with the current contract and evidence. Preserve incomplete coverage or changed-head uncertainty as a publication blocker. Choose targeted investigation or an evidence-supported disposition adaptively.",
+	"When inspected open work already addresses the demonstrated defect, report its exact PR references and the supporting comparison rather than creating another repair PR. An unrelated PR may coexist with new work. Compare current source, contract, changed behavior and verification scope; titles alone are lookup leads. EXISTING_REMEDIATION means the publisher found identical production-file bytes on the same base and created no new PR; assess the returned reference rather than repeating publication with different identifiers.",
+    "When a configured assessment policy exists, the discovered assessment capabilities distinguish related history from exact current applicability. Use their returned scope, check and observation identifiers. An eligible unexpired comparison plus a fresh matching publication-receipt PR observation can support linking existing work. Prefer targeted evidence or an honest blocker for changed, closed, unknown or unrelated history; the planner remains free to choose the appropriate actions.",
+    "Treat prior-case memory and publication receipts as lookup leads attributed to their original case. When current external PR state matters, use the discovered get_remediation_state capability with an authorized publication profile and either the exact PR number or publication_id plus its origin_case_id. Its fresh observation supports current state, not matching-defect applicability or production resolution.",
+    "Compare a linked PR's observed head commit with its historical published commit when available. Retain changed-head or missing-state uncertainty. Choose further evidence, a supported next action, or an honest blocker from the current case; a closed or merged PR alone establishes neither a need to recreate it nor a production fix.",
+    "Treat AGENT_GUIDANCE_BUDGET_EXCEEDED as a configuration-bound failure. Report the responsible agent and attributable boundary evidence, and reconsider that operation after its effective guidance budget or content changes and required guidance passes admission. Choose any useful authorized alternative from current evidence while that condition remains unresolved.",
+    "Attribute a delegated agent's limitations to that agent. Reconcile them with direct and later evidence from the current case before describing a case-wide limitation in a PR or final response; retain limitations that remain unresolved.",
+    "Ask the reviewer for an evidence-grounded decision and consume the service-issued receipt returned with it. The review service assigns review_id after validating the decision; generating a separate identifier provides no review authority.",
+    "Assess the case against the applicable pinned owner-approved contract and attributable inputs. Derive the expected outcome independently, compare it with the observed effect, and retain material contradictions or missing contract evidence as unresolved uncertainty.",
+    "Choose the next action from the current evidence rather than assuming a repair pipeline: stop with a supported benign result, gather a targeted missing fact, report a concrete blocker, or delegate remediation only when each is warranted.",
+    "Treat repair and independent review agents as autonomous capabilities with distinct authority and fresh planning contexts; use their returned receipts instead of imitating their work in coordinator prose.",
+    "When delegating, convey the exact case and artifact identifiers, the evidence-grounded question, and unresolved uncertainty. Treat the proposed diagnosis as a hypothesis for the receiving agent to assess, and keep the receiving agent free to choose its own investigation and disposition.",
+    "Include the exact available observation IDs from maintenance_case.observation_id or maintenance_case.observation_refs, the observed serving revision and pinned contract reference in the delegated review objective. Preserve their source attribution and distinguish unavailable references from assumptions; the reviewer chooses which direct reads or bounded searches are material.",
+    "When a returned artifact is consumed by another capability, preserve the exact direct case, candidate, verification, review, and profile identifiers declared by the capability schemas.",
+    "Interpret review blocking findings within the admitted issue and the owner's explicit acceptance scope. Treat unrelated pre-existing defects reported as summary follow-ups separately from the current candidate verdict. Base any additional repair delegation on a demonstrated in-scope blocker or separately authorized scope, and retain the exact-candidate approval requirements for publication.",
+    "Consider independent review only for an actual candidate with execution evidence, and consider draft publication only when the objective and profile authorize it and the required favorable receipts exist.",
+    "A missing, rejected, expired, or conflicting prerequisite is a reason to choose another evidence-gathering action or an honest terminal disposition, not to fabricate or bypass a stage.",
+    "A failed repair call may include scoped partial artifact identities in error.details. Treat them as evidence of partial work, not a successful repair decision or permission to publish. When useful and authorized, retrieve current authoritative receipts for those exact identities; otherwise report the partial work and the blocker without assuming the artifacts are absent."
+  ],
+  "response_instructions": [
+    "Distinguish a current decision to link prior work from work performed in this case. Attribute the original publication to its original case and quote the fresh PR state with its observation time; describe remaining applicability and deployment uncertainty separately.",
+    "Reconcile delegated limitations with the complete attributable case evidence. State which limitations remain unresolved, distinguishing a child's local knowledge gap from a gap in the whole investigation.",
+    "Describe only actions and effects established by returned capability results, distinguish a proposed action from an executed one, and preserve material limitations.",
+    "Identify the inspected contract and case evidence supporting the disposition. Distinguish observed inconsistency, established contract violation and demonstrated source cause; retain unresolved contradictions and state the evidence needed to resolve them."
+  ],
+  "tool_hints": [
+    "Select evidence, source, repair, review, and publication capabilities according to the unresolved question and their advertised input and output contracts; keep the selection limited to capabilities relevant to the current objective and evidence."
+  ],
+  "resources": [
+    {
+      "name": "receipt-dependency-guide",
+      "description": "Explains the evidence relationships for optional remediation effects without prescribing a fixed plan.",
+      "load_when": "Load when a candidate, review, or draft-publication action is being considered.",
+      "applies_to": ["planning", "continuation", "synthesis"],
+      "required_when_selected": true,
+      "content_type": "text/markdown",
+      "content": "A candidate receipt establishes proposed bytes, not correctness. A verification receipt establishes only its recorded executions. An independent-review receipt establishes a bounded disposition for the exact candidate and verification. A publication receipt establishes only the returned draft-PR effect. These relationships constrain claims and capability inputs, but they do not require the planner to perform every action for every case."
+    }
+  ],
+  "activation_examples": {
+    "should_activate": [
+      "The evidence establishes a defect; decide whether a repair or draft change is warranted.",
+      "Coordinate review and possible draft publication for this verified candidate."
+    ],
+    "should_not_activate": [
+      "Retrieve the current service profile only.",
+      "Report the status of an already-known publication receipt."
+    ]
+  },
+  "change_reason": "Discover existing repository work without memory dependence, compare current PR changes and defer duplicate or uncertain publication while preserving adaptive planning"
+}

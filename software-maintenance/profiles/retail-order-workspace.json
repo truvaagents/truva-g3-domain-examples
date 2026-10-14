@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "workspace_profile_id": "retail-order-go",
+  "repository_id": "retail-order-service",
+  "verification_ready": true,
+  "runner_image": "docker.io/library/golang@sha256:4c9fe60190a2a3350ddc51de80d0224b8a6698d12bdfc999fee45ea9d6c46dbc",
+  "workspace_pvc": "maintenance-workspaces",
+  "allowed_callers": [
+    "maintenance-agent",
+    "maintenance-repair-agent",
+    "maintenance-review-agent"
+  ],
+  "candidate_stage_callers": [
+    "maintenance-repair-agent"
+  ],
+  "denied_paths": [
+    ".env",
+    ".git",
+    ".github",
+    "deploy",
+    "secrets",
+    "credentials"
+  ],
+  "experiment_commands": [
+    {
+      "id": "go-test-all",
+      "argv": [
+        "go",
+        "test",
+        "-json",
+        "-count=1",
+        "./..."
+      ]
+    },
+    {
+      "id": "go-vet-all",
+      "argv": [
+        "go",
+        "vet",
+        "./..."
+      ]
+    }
+  ],
+  "reproduction_command_id": "go-test-all",
+  "verification_command_ids": [
+    "go-test-all",
+    "go-vet-all"
+  ],
+  "limits": {
+    "workspace_ttl_seconds": 604800,
+    "maximum_snapshot_bytes": 16777216,
+    "maximum_snapshot_files": 1000,
+    "maximum_candidate_files": 32,
+    "maximum_candidate_bytes": 524288,
+    "maximum_file_bytes": 524288,
+    "maximum_job_seconds": 300,
+    "maximum_job_log_bytes": 524288,
+    "maximum_artifact_read_bytes": 65536
+  },
+  "limitations": [
+    "The runner image is digest-pinned for this acceptance run.",
+    "This operator-authorized development run uses functional-acceptance mode. Local NetworkPolicy enforcement has been observed, but these functional receipts do not attest production-grade network isolation.",
+    "The functional Kind runner may download pinned Go modules; a production runner must use vendored dependencies or an owner-approved image with enforced egress denial.",
+    "A failing named regression test is execution evidence, but contract provenance and independent review remain separate publication prerequisites."
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "publication_profile_id": "retail-order-publication",
+  "publication_ready": true,
+  "repository_id": "retail-order-service",
+  "workspace_profile_id": "retail-order-go",
+  "expected_source_profile_sha256": "2c7de4910c0035d2cb68d13c46b5cc6e14154f97baeda052b0edab3501609888",
+  "expected_workspace_profile_sha256": "6d3851905de15d9b82af2672ecdf488f8dd4f3c2ed44f175e055a9912c8fcd35",
+  "expected_review_profile_sha256": "7664d906e4de4ac67511d7134b48e3f037036ced1501122996b332f1985dc736",
+  "owner": "truvaagents",
+  "repository": "retail-order-service",
+  "base_ref": "main",
+  "branch_prefix": "truva-maintenance",
+  "commit_author_name": "Maintenance Automation (Example)",
+  "commit_author_email": "maintenance-automation@example.invalid",
+  "allowed_callers": [
+    "maintenance-agent"
+  ],
+  "denied_paths": [
+    ".env",
+    ".git",
+    ".github",
+    "deploy",
+    "secrets",
+    "credentials"
+  ],
+  "limits": {
+    "timeout_milliseconds": 15000,
+    "maximum_files": 32,
+    "maximum_candidate_bytes": 524288,
+    "maximum_title_bytes": 120,
+    "maximum_body_bytes": 12000,
+    "record_ttl_seconds": 2592000,
+    "claim_ttl_seconds": 120
+  },
+  "limitations": [
+    "Publication is enabled only for the owner-authorized functional acceptance run with exact source, verification, and review receipts.",
+    "The resulting draft pull request demonstrates integration but does not attest production-grade Kind runner isolation.",
+    "Only draft pull requests are supported; merge, approval, release, deployment, and production mutation are outside this tool's authority.",
+    "GitHub Actions and repository branch policy must be reviewed before agent-generated branches are enabled."
+  ]
+}

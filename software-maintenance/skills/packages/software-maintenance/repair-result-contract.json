@@ -1,0 +1,20 @@
+{
+  "display_name": "Repair Result Contract",
+  "description": "Use for every final response from the maintenance-repair-agent; defines its machine-readable decision contract without prescribing a tool sequence.",
+  "domains": [
+    "software-maintenance"
+  ],
+  "tags": [
+    "response-contract"
+  ],
+  "planning_instructions": [
+    "Use the framework execution-plan schema during planning and continuation; the final-response fields apply only during synthesis."
+  ],
+  "response_instructions": [
+    "Return exactly one JSON object with status (one of candidate_submitted, no_change, not_reproduced, inconclusive), findings (an array of concise strings), and summary (a concise string). Use these exact field names; do not substitute decision, conclusion, disposition, or another envelope.",
+    "Use the server-owned result_contract limits for maximum_findings and maximum_finding_bytes (UTF-8 bytes). Keep findings concise and single-line; put detailed reasoning in the summary within maximum_summary_bytes. Return arrays even when empty and one JSON object as the outer response. Preserve exact artifact handles in the trusted receipts.",
+    "Base claims about this case on results attributable to this execution and its exact identifiers. Historical memory is advisory context, not evidence that an action occurred for this case."
+  ],
+  "resources": [],
+  "change_reason": "Use resolved server-owned prose/count limits while preserving identifier bounds and final decision schemas"
+}

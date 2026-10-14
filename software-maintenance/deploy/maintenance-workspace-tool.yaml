@@ -1,0 +1,285 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: maintenance-workspace-tool
+  namespace: software-maintenance
+  labels:
+    app: maintenance-workspace-tool
+    app.kubernetes.io/part-of: software-maintenance
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: maintenance-workspace-tool-runner
+  namespace: software-maintenance
+  labels:
+    app: maintenance-workspace-tool
+    app.kubernetes.io/part-of: software-maintenance
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: maintenance-workspace-tool-runner
+  namespace: software-maintenance
+  labels:
+    app: maintenance-workspace-tool
+    app.kubernetes.io/part-of: software-maintenance
+subjects:
+  - kind: ServiceAccount
+    name: maintenance-workspace-tool
+    namespace: software-maintenance
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: maintenance-workspace-tool-runner
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: maintenance-workspaces
+  namespace: software-maintenance
+  labels:
+    app: maintenance-workspace-tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: maintenance-sandbox-deny-all
+  namespace: software-maintenance
+  labels:
+    app: maintenance-workspace-tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  podSelector:
+    matchLabels:
+      maintenance-sandbox: "true"
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: maintenance-sandbox-functional-acceptance-egress
+  namespace: software-maintenance
+  labels:
+    app: maintenance-workspace-tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  podSelector:
+    matchLabels:
+      maintenance-sandbox: "true"
+      maintenance-functional-acceptance: "true"
+  policyTypes: ["Egress"]
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - ports:
+        - protocol: TCP
+          port: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maintenance-workspace-tool
+  namespace: software-maintenance
+  labels:
+    app: maintenance-workspace-tool
+    component: tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  selector:
+    app: maintenance-workspace-tool
+    component: tool
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8401
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maintenance-workspace-tool
+  namespace: software-maintenance
+  labels:
+    app: maintenance-workspace-tool
+    component: tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: maintenance-workspace-tool
+      component: tool
+  template:
+    metadata:
+      labels:
+        app: maintenance-workspace-tool
+        component: tool
+        app.kubernetes.io/part-of: software-maintenance
+    spec:
+      terminationGracePeriodSeconds: 40
+      serviceAccountName: maintenance-workspace-tool
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 20001
+        fsGroup: 20001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: maintenance-workspace-tool
+          image: maintenance-workspace-tool:latest
+          imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8401
+          envFrom:
+            - configMapRef:
+                name: maintenance-workspace-tool-env-config
+          env:
+            - name: PORT
+              value: "8401"
+            - name: NAMESPACE
+              value: software-maintenance
+            - name: REDIS_URL
+              value: redis://redis.truvag3-examples:6379/0
+            - name: TRUVAG3_REDIS_NAMESPACE
+              value: default
+            - name: TRUVAG3_DISCOVERY_RETRY
+              value: "true"
+            - name: TRUVAG3_DISCOVERY_RETRY_INTERVAL
+              value: 30s
+            - name: TRUVAG3_K8S_SERVICE_NAME
+              value: maintenance-workspace-tool
+            - name: TRUVAG3_K8S_SERVICE_PORT
+              value: "80"
+            - name: TRUVAG3_K8S_POD_APP_LABEL
+              value: maintenance-workspace-tool
+            - name: TRUVAG3_K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: TRUVAG3_K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MAINTENANCE_WORKSPACE_PROFILES_FILE
+              value: /app/profiles/retail-order-workspace.json
+            - name: MAINTENANCE_WORKSPACE_ROOT
+              value: /var/lib/maintenance-workspaces
+            - name: MAINTENANCE_SOURCE_TOOL_URL
+              value: http://maintenance-source-tool.software-maintenance.svc.cluster.local
+            - name: MAINTENANCE_SOURCE_WORKSPACE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: maintenance-workspace-tool-secrets
+                  key: MAINTENANCE_SOURCE_WORKSPACE_TOKEN
+            - name: MAINTENANCE_WORKSPACE_COORDINATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: maintenance-workspace-tool-secrets
+                  key: MAINTENANCE_WORKSPACE_COORDINATOR_TOKEN
+            - name: MAINTENANCE_WORKSPACE_REPAIR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: maintenance-workspace-tool-secrets
+                  key: MAINTENANCE_WORKSPACE_REPAIR_TOKEN
+            - name: MAINTENANCE_WORKSPACE_REVIEW_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: maintenance-workspace-tool-secrets
+                  key: MAINTENANCE_WORKSPACE_REVIEW_TOKEN
+            - name: MAINTENANCE_WORKSPACE_PUBLICATION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: maintenance-workspace-tool-secrets
+                  key: MAINTENANCE_WORKSPACE_PUBLICATION_TOKEN
+            - name: APP_ENV
+              value: development
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.truvag3-examples:4318
+          volumeMounts:
+            - name: workspaces
+              mountPath: /var/lib/maintenance-workspaces
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 25m
+              memory: 48Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/capabilities
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: workspaces
+          persistentVolumeClaim:
+            claimName: maintenance-workspaces
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: maintenance-workspace-tool
+  namespace: software-maintenance
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
+  labels:
+    app: maintenance-workspace-tool
+    component: tool
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: maintenance-workspace-tool.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: maintenance-workspace-tool
+                port:
+                  number: 80

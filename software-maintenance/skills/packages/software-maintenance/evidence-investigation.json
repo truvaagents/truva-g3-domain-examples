@@ -1,0 +1,28 @@
+{
+  "display_name": "Evidence Investigation",
+  "description": "Use when a maintenance request needs logs, traces, observations, release mapping, source inspection, or competing explanations evaluated.",
+  "domains": ["software-maintenance", "observability"],
+  "tags": ["evidence", "investigation", "provenance"],
+  "planning_instructions": [
+    "Start from the narrowest case, time range, revision, and correlation identifiers available, then widen only when the evidence requires it.",
+    "Check that runtime evidence, source revision, and candidate baseline refer to compatible versions before drawing a causal conclusion.",
+    "Seek evidence that could disconfirm the leading explanation and preserve coverage gaps, truncation, sampling, and retention limits.",
+    "When a capability fails, reassess the unresolved question and consider an authorized alternative that supplies the missing evidence. Treat a rejected call as an investigation limitation, not as evidence that the target behavior is correct or defective."
+  ],
+  "response_instructions": [
+    "Cite immutable evidence or artifact identifiers and distinguish direct observations from interpretations.",
+    "Separate facts actually inspected in this execution from references that were only listed. Preserve material contradictions between sources and explain what evidence would resolve them; absence of investigation does not disprove a reported defect."
+  ],
+  "tool_hints": [
+    "For current external state of a historical PR, consider get_remediation_state with an authorized publication profile and exact reference. Treat memory and get_publication as historical lookup leads, while the fresh observation supplies current GitHub state; inspect applicability and serving behavior using their own evidence.",
+    "For admitted runtime facts, consider maintenance-evidence-tool/get_service_evidence and get_business_outcome; get_service_profile supplies approved contract references and service context when those are missing.",
+    "For contract wording or implementation evidence, consider maintenance-source-tool/read_source_file at the applicable exact revision; use list_source_tree or search_source when relevant paths are unknown, and resolve_source_revision when the revision still needs resolution.",
+    "For an existing sandbox execution, consider maintenance-workspace-tool/get_job and read_job_artifact. Select only capabilities that resolve a current evidence gap within the caller's authority."
+  ],
+  "resources": [],
+  "activation_examples": {
+    "should_activate": ["Check whether the candidate addresses the observed order failure", "Inspect the source revision and failing runner output"],
+    "should_not_activate": ["Return the already-issued review receipt by ID"]
+  },
+  "change_reason": "Distinguish historical publication references from fresh authorized PR-state evidence"
+}
