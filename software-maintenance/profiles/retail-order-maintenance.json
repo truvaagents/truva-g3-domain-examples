@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "coordinator_profile_id": "retail-order-maintenance",
+  "investigation_ready": true,
+  "service_profile_id": "retail-order-service",
+  "repository_id": "retail-order-service",
+  "expected_service_profile_version": "sha256:88f46ed6d47023ce1aa8904e2f57bfd61669f6c2d2864880a06837320fd8cf4c",
+  "repair_profile_id": "retail-order-repair",
+  "expected_repair_profile_sha256": "fac52cb249352e49e2aa89474fe4ec96e9cece7c187ffd6e30aa3441ee2ba09c",
+  "review_profile_id": "retail-order-review",
+  "expected_review_profile_sha256": "7664d906e4de4ac67511d7134b48e3f037036ced1501122996b332f1985dc736",
+  "publication_profile_id": "retail-order-publication",
+  "expected_publication_profile_sha256": "d997506a55fe2fd66f1d3c78ac37041572051ef3b2fa7aeacff868e5242795ee",
+  "allowed_callers": [
+    "maintenance-operator"
+  ],
+  "assessment_allowed_callers": [
+    "maintenance-operator",
+    "maintenance-agent"
+  ],
+  "assessment_policy": {
+    "schema_version": 1,
+    "revision": "retail-order-contract-v3",
+    "environment_id": "software-maintenance",
+    "rules": [
+      {
+        "check_id": "checkout-outcome",
+        "operation": "create_order",
+        "signature_paths": [
+          "/observation/operation",
+          "/observation/sku",
+          "/observation/quantity",
+          "/observation/discount_cents"
+        ],
+        "comparison_paths": [
+          "/observation/http_status",
+          "/observation/unit_price_cents",
+          "/observation/discount_cents",
+          "/observation/currency",
+          "/outcome/ledger/total_cents",
+          "/observation/requested_promotion_code"
+        ],
+        "allow_empty_string_paths": [
+          "/observation/requested_promotion_code"
+        ]
+      }
+    ]
+  },
+  "collection": {
+    "enabled": false,
+    "private_redis_deployment": "software-maintenance-collection",
+    "schedule_id": "retail-order-observation-collection",
+    "cron_expression": "* * * * *",
+    "window_seconds": 300,
+    "overlap_seconds": 60,
+    "item_limit": 50,
+    "successful_sample_modulus": 5
+  },
+  "limits": {
+    "maximum_request_bytes": 32768,
+    "maximum_objective_bytes": 8192,
+    "maximum_observation_refs": 32,
+    "maximum_findings": 32,
+    "maximum_collection_calls": 8,
+    "maximum_admission_attempts": 3,
+    "maximum_finding_bytes": 1024
+  },
+  "limitations": [
+    "Scheduled collection is disabled by default; enabling it requires persistent finite admission controls and an explicit operator run ID.",
+    "Functional Kind verification does not establish production-grade network isolation.",
+    "The v0.5.0 Redis task queue does not establish crash-safe at-least-once delivery; failed or ambiguous admissions remain visible for reconciliation.",
+    "Assessment linking requires current owner-configured checkout facts and the same immutable release/configuration pins; similarity alone does not authorize reuse or suppress admission.",
+    "Draft publication remains independently gated by the publication tool and cannot merge or deploy a change."
+  ]
+}

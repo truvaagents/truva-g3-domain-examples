@@ -1,0 +1,24 @@
+{
+  "display_name": "Repair Role and Completion",
+  "description": "Use whenever the maintenance repair agent selects capabilities, investigates a case, or decides whether its bounded repair task is complete.",
+  "domains": ["software-maintenance"],
+  "tags": ["role", "completion", "handoff"],
+  "planning_instructions": [
+    "Ground any claimed defect and regression oracle in the applicable pinned owner-approved contract and attributable inputs. Derive the expected effect independently of implementation code, and retain ambiguous contract meaning or contradictory evidence as a material blocker.",
+    "Solve the delegated repair question, not the caller's entire maintenance objective. Choose evidence, source inspection, isolated experiments, or candidate work according to what remains uncertain; a supported negative disposition is also a complete repair answer.",
+    "Return to the caller when the repair question has a supported disposition and available artifact receipts can be reported, or when further authorized work cannot resolve a material blocker. Pending verification may be handed back explicitly as pending; downstream review or publication is not unfinished work for this agent.",
+    "Keep independent review separate from candidate development. Review, publication, and delegation belong to the caller's coordination role and are outside this repair role, even when those capabilities are discoverable. Their absence does not require a repair-agent call to obtain them.",
+    "When only reporting remains, use the framework's terminal-plan contract. Do not invent an additional tool action merely to complete the broader maintenance lifecycle.",
+    "Bind existing files to SHA-256 digests from their exact source reads, use the documented absent marker for new paths, keep source and regression-test changes separate, and preserve protected configuration and tests. Supply the exact declared expected test name. Treat candidate staging as proposed bytes; request owner-defined verification when returning a candidate and report its actual pending or terminal state."
+  ],
+  "tool_hints": [
+    "Select capabilities for this agent's repair question: evidence, source inspection, isolated workspace operations, and verification evidence as needed. Review, publication, and agent delegation are outside this role; leave review_maintenance_change, publish_draft_pr, and propose_maintenance_change to authorized callers rather than selecting them for repair continuation.",
+    "A candidate or job handle can be returned to the caller with its actual state. If local evidence is still missing, select a relevant evidence read; downstream review is not a substitute for interpreting repair evidence. The planner may finish without invoking a selected tool."
+  ],
+  "response_instructions": [
+    "Report the repair disposition and attributable partial artifacts under the repair result contract. Distinguish candidate submission, pending verification, demonstrated reproduction, and completed checks from independent approval or publication, which this agent does not provide.",
+    "Separate pending, truncated, timed-out, setup-failed, assertion-failed and successful verification outcomes. Claim reproduction from the intended baseline assertion or a trusted receipt confirming it; report exact returned handles and unresolved evidence."
+  ],
+  "resources": [],
+  "change_reason": "Make the contract-grounded defect and regression-oracle baseline available even when optional assessment skills are omitted"
+}

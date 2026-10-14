@@ -34,6 +34,7 @@ its own `setup.sh`.
 | Example | Scenario | Entry point |
 |---|---|---|
 | [Agentic Commerce Control Tower](agentic-commerce/) | Evidence-grounded order recovery with deterministic enforcement, HITL, and a domain-neutral knowledge gateway | `cd agentic-commerce && ./setup.sh deploy` |
+| [Autonomous Software Maintenance](software-maintenance/) | Scheduled observation, source-backed investigation, isolated candidate testing, independent review and draft-only PR publication; published v0.6.0 verified in existing Kind infrastructure; public/fork setup gates remain | `cd software-maintenance && ./setup.sh help`; follow its README before `./setup.sh deploy-all` |
 
 The original proposal and supporting knowledge-foundry research are preserved
 under [solution-blueprints](solution-blueprints/).
@@ -48,6 +49,14 @@ new values here before adding another service.
 | `order-operations-agent` | 8394 | agent |
 | `commerce-core` | 8395 | tool |
 | `domain-knowledge-gateway` | 8396 | tool |
+| `maintenance-evidence-tool` | 8397 | tool |
+| `maintenance-agent` | 8398 | coordinator agent |
+| `maintenance-source-tool` | 8399 | tool |
+| `maintenance-repair-agent` | 8400 | agent |
+| `maintenance-workspace-tool` | 8401 | tool |
+| `maintenance-review-agent` | 8402 | agent |
+| `maintenance-publication-tool` | 8403 | tool |
+| `maintenance-assessment-tool` | 8404 | tool |
 
 Shared services—including Redis, Registry Viewer, OpenTelemetry, Jaeger,
 Prometheus, Grafana, ingress, and the Skills API—remain owned by the sibling
@@ -58,6 +67,7 @@ Prometheus, Grafana, ingress, and the Skills API—remain owned by the sibling
 ```text
 truva-g3-domain-examples/
 ├── agentic-commerce/       # runnable multi-service capability demo
+├── software-maintenance/   # investigation and isolated checkout repair of the separate target
 ├── solution-blueprints/    # preserved architecture and research blueprints
 ├── AGENTS.md               # coding-assistant rules for this repository
 ├── .gitignore

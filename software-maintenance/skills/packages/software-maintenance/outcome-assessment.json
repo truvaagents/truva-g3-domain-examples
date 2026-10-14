@@ -1,0 +1,27 @@
+{
+  "display_name": "Outcome Assessment",
+  "description": "Use when deciding whether an observed business outcome violates an owner-approved contract or may reflect valid configuration, rejection, or eventual consistency.",
+  "domains": ["software-maintenance"],
+  "tags": ["contract", "business-outcome", "assessment"],
+  "planning_instructions": [
+    "Use a pinned owner-approved contract and the applicable runtime or transaction context as the correctness baseline; implementation code alone is not the business oracle.",
+    "Read the exact pinned contract content needed for the decision; a reference path or remembered summary is not evidence of its current wording.",
+    "Derive the expected outcome independently from the applicable contract and raw inputs, checking units, scope, signs, and rounding. Compare the derived result with the final recorded effect and with any reported intermediate values; an intermediate field can look correct while the effect is inconsistent.",
+    "Account for documented exceptions, rounding, rejection rules, configuration, and eventual consistency before labeling an outcome defective.",
+    "When contract meaning or applicability is ambiguous, record a baseline gap instead of inventing an expected result."
+  ],
+  "response_instructions": [
+    "Name the contract revision and applicability evidence behind each correctness conclusion.",
+    "For a quantitative conclusion, state the relevant inputs and units, the contract-derived relationship, the expected result, and the observed result. Reconcile contradictory intermediate fields and final effects, or retain the contradiction explicitly as unresolved.",
+    "Distinguish an observed inconsistency from a confirmed business-contract violation and from a proven source-code cause. When the applicable contract was not read, report that limitation instead of clearing the behavior based on a plausible field or a successful HTTP response."
+  ],
+  "tool_hints": [
+    "Consider maintenance-evidence-tool/get_service_profile for approved contract references, get_business_outcome for the recorded effect, and maintenance-source-tool/read_source_file for the pinned contract text. Choose the missing evidence needed to assess the outcome; a contract path alone does not provide its content."
+  ],
+  "resources": [],
+  "activation_examples": {
+    "should_activate": ["Does this recorded quantity violate the pinned conversion contract?", "The reported adjustment and final balance disagree; determine what the approved rules imply."],
+    "should_not_activate": ["Show the status of sandbox job job_abc"]
+  },
+  "change_reason": "Carry independent quantitative comparison and unresolved contradictions into synthesis as well as planning"
+}

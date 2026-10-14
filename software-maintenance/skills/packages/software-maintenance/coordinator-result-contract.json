@@ -1,0 +1,25 @@
+{
+  "display_name": "Coordinator Result Contract",
+  "description": "Use for every final response from the maintenance-agent; defines its machine-readable decision contract without prescribing a tool sequence.",
+  "domains": [
+    "software-maintenance"
+  ],
+  "tags": [
+    "response-contract"
+  ],
+  "planning_instructions": [
+    "Assess a fresh observation from its attributable contract and outcome evidence. A supported benign conclusion or new-case action uses this case's evidence; prior assessment history is required only for linked positive statuses. For applicable or plausibly related open PRs without the eligible assessment required for linkage, use blocked or inconclusive with inspected PR references and remaining uncertainty. Distinguish publication deferred for existing work from new publication and production resolution.",
+    "Use the framework execution-plan schema during planning and continuation; the final-response fields apply only during synthesis. Assessment issuance is application-owned bookkeeping after case completion; planning uses the assessment read capabilities for evidence.",
+    "Treat related assessment history as an attributed lead. A linked positive outcome is supported by a current find_related_assessments result for this observation/check with eligible:true, plus an exact unexpired assessment. existing_remediation additionally needs a fresh receipt-form get_remediation_state observation with the original case/publication and unchanged head. Choose further investigation or an honest limitation when these facts are unavailable."
+  ],
+  "response_instructions": [
+    "Choose benign when this observation is consistent with the current owner-approved contract and attributable outcome evidence. An empty assessment history leaves direct fresh-case judgment available. For attempted linkage to existing work without an eligible exact assessment, use blocked or inconclusive with the demonstrated issue, inspected PR references and remaining uncertainty. Reserve known_issue, existing_remediation and awaiting_deployment for an eligible current comparison and exact returned assessment identifiers, plus their required remediation evidence.",
+    "Return exactly one JSON object with status (one of benign, inconclusive, blocked, action_proposed, publication_requested, known_issue, existing_remediation, awaiting_deployment), findings (an array of concise strings), and summary (a concise string). Use these exact field names as the outer object.",
+    "For benign, inconclusive, blocked, action_proposed and publication_requested, return status, findings and summary; omit assessment and remediation. Put historical assessment identifiers, inspected PR references and linkage uncertainty in findings or summary. For example, a direct benign conclusion has the shape {\"status\":\"benign\",\"findings\":[],\"summary\":\"<conclusion supported by this observation's evidence>\"}.",
+    "For a linked positive status, include assessment:{assessment_id,observation_id,check_id} with exact returned identifiers, and next_check:{condition,not_before} with a bounded condition and a future RFC3339 deadline within the configured revalidation interval. existing_remediation and awaiting_deployment also include remediation:{publication_id,origin_case_id} from that assessment's original remediation. existing_remediation requires open state and unchanged published head. awaiting_deployment requires verified merge and serving source proven to remain at the observed PR base. Describe unknown deployment honestly. A recorded next_check is guidance only; automatic suppression and reconsideration are disabled.",
+    "Use the server-owned result_contract limits for maximum_findings and maximum_finding_bytes (UTF-8 bytes). Keep findings concise and single-line; put detailed reasoning in the summary within maximum_summary_bytes. Return arrays even when empty and one JSON object as the outer response. Preserve exact artifact handles in the trusted receipts.",
+    "Base claims about this case on results attributable to this execution and its exact identifiers. Historical memory is advisory context. Separate an applicable assessment and fresh external PR state from new publication performed in this case. Preserve original case/execution attribution. A PR's open or merged state alone establishes neither applicability nor production resolution. Keep merge, deployment and production resolution outside a draft-publication claim."
+  ],
+  "resources": [],
+  "change_reason": "Separate non-linked result fields from positive-link references and assign assessment issuance to post-completion application bookkeeping"
+}

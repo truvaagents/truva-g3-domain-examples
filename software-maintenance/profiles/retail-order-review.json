@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "review_profile_id": "retail-order-review",
+  "review_ready": true,
+  "service_profile_id": "retail-order-service",
+  "workspace_profile_id": "retail-order-go",
+  "expected_service_profile_version": "sha256:88f46ed6d47023ce1aa8904e2f57bfd61669f6c2d2864880a06837320fd8cf4c",
+  "expected_source_profile_sha256": "2c7de4910c0035d2cb68d13c46b5cc6e14154f97baeda052b0edab3501609888",
+  "expected_workspace_profile_sha256": "6d3851905de15d9b82af2672ecdf488f8dd4f3c2ed44f175e055a9912c8fcd35",
+  "repository_id": "retail-order-service",
+  "allowed_callers": [
+    "maintenance-agent"
+  ],
+  "limits": {
+    "maximum_request_bytes": 32768,
+    "maximum_objective_bytes": 8192,
+    "maximum_candidate_files": 32,
+    "maximum_candidate_bytes": 524288,
+    "maximum_findings": 32,
+    "maximum_reference_bytes": 256,
+    "receipt_ttl_seconds": 604800,
+    "maximum_finding_bytes": 1024
+  },
+  "limitations": [
+    "Approval is enabled only for the owner-approved functional acceptance profile and exact trusted receipts.",
+    "Functional Kind verification does not establish production-grade network isolation.",
+    "A separate model context reduces shared assumptions but does not itself establish correctness.",
+    "Runner receipts establish execution facts; reviewer prose cannot convert a failed or incomplete receipt into a pass."
+  ]
+}

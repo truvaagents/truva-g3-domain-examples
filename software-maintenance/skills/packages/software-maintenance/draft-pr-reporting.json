@@ -1,0 +1,40 @@
+{
+  "display_name": "Evidence-grounded Draft PR Reporting",
+  "description": "Use when a maintenance coordinator must report a proposed change, independent review, or actual draft pull-request outcome without overstating what occurred.",
+  "domains": ["software-maintenance", "change-reporting"],
+  "tags": ["draft-pr", "receipts", "reporting"],
+  "planning_instructions": [
+    "Keep new-publication candidate, verification, review, and publication identities linked to the same case and exact artifact versions. Keep a linked historical publication attributed to its original case and distinguish it from any new publication for this case.",
+    "Treat publication as eligible only when the publication capability accepts the current trusted receipts, with favorable prose remaining non-authoritative.",
+    "Describe a requested, reserved, failed, or completed publication according to its actual returned state, and keep merge and deployment outside the claimed outcome."
+  ],
+  "response_instructions": [
+    "For a historical publication, distinguish its original draft-creation receipt from fresh get_remediation_state evidence. Attribute externally observed closure or merge to the GitHub observation and its time, rather than claiming the publication tool performed that action or that production is resolved.",
+    "Name only receipt identifiers and pull-request metadata returned by capabilities, preserve unresolved limitations, and call a pull request draft unless an external system independently changes its state."
+  ],
+  "tool_hints": [
+    "Use the bounded draft-publication capability only after actual candidate, verification, and independent-review results are available."
+  ],
+  "resources": [
+    {
+      "name": "publication-report-checklist",
+      "description": "Checks that a maintenance publication statement matches the recorded effect.",
+      "load_when": "Load when synthesizing a candidate, review, or draft pull-request outcome.",
+      "applies_to": ["planning", "continuation", "synthesis"],
+      "required_when_selected": true,
+      "content_type": "text/markdown",
+      "content": "Bind a new-publication report to the case, candidate, verification, and review receipts. Distinguish a publication request from a successful draft-PR receipt. Include the returned repository, branch, pull-request URL, and draft state when present. The publication receipt proves draft creation only. A fresh authorized external observation may separately establish later PR closure or merge, attributed to that observation and its time. Release, deployment, and production resolution require their own evidence. Preserve receipt expiry, profile readiness, and other current limitations."
+    }
+  ],
+  "activation_examples": {
+    "should_activate": [
+      "Prepare a truthful draft pull-request summary for this verified and approved candidate.",
+      "Report what happened when publication was requested for this maintenance case."
+    ],
+    "should_not_activate": [
+      "Collect recent service observations.",
+      "Develop a regression test for this suspected defect."
+    ]
+  },
+  "change_reason": "Separate historical draft-creation claims from freshly observed external PR transitions"
+}

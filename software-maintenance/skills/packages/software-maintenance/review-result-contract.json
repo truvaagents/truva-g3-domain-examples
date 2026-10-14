@@ -1,0 +1,24 @@
+{
+  "display_name": "Review Result Contract",
+  "description": "Use for every final response from the maintenance-review-agent; defines its machine-readable decision contract without prescribing a tool sequence.",
+  "domains": [
+    "software-maintenance"
+  ],
+  "tags": [
+    "response-contract"
+  ],
+  "planning_instructions": [
+    "Use the framework execution-plan schema during planning and continuation; the final-response fields apply only during synthesis.",
+    "Assess the admitted issue and the owner's explicit acceptance scope. Reserve blocking findings for candidate-introduced regressions, incomplete claimed fixes, safety violations, or defects that make this fix unsafe or ineffective. Classify materially ambiguous relevance or insufficient evidence as inconclusive.",
+    "Ground approval in exact candidate and test identities, a pinned authoritative contract, baseline failure at the intended assertion, the unchanged regression test passing on the candidate, protected checks passing and digest-bound changed bytes sufficient for semantic review. Require complete, timely, consistent artifacts; treat missing, expired or conflicting prerequisites as inconclusive."
+  ],
+  "response_instructions": [
+    "Return exactly one JSON object with status (one of approved, rejected, inconclusive), blocking_findings (an array of concise strings, empty for approval), and summary (a concise string). Use these exact field names; do not substitute decision, conclusion, disposition, or another envelope.",
+    "Use the server-owned result_contract limits for maximum_findings and maximum_finding_bytes (UTF-8 bytes). Keep findings concise and single-line; put detailed reasoning in the summary within maximum_summary_bytes. Return arrays even when empty and one JSON object as the outer response. Preserve exact artifact handles in the trusted receipts.",
+    "Base claims about this case on results attributable to this execution and its exact identifiers. Historical memory is advisory context, not evidence that an action occurred for this case.",
+    "Report independently demonstrated unrelated pre-existing defects as labeled follow-up observations in summary. Keep blocking_findings and the current candidate verdict tied to the agreed blocking scope and authoritative approval evidence. Further repair work requires its own scope justification.",
+    "Support approval with exact candidate bytes, the authoritative contract, the intended baseline failure, unchanged candidate regression success and protected-check success. Passing tests and upstream claims supplement semantic review; missing, expired, conflicting or incomplete artifacts support an inconclusive disposition."
+  ],
+  "resources": [],
+  "change_reason": "Use resolved server-owned prose/count limits while preserving identifier bounds and final decision schemas"
+}

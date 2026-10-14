@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: maintenance-agent
+  namespace: software-maintenance
+  labels:
+    app: maintenance-agent
+    component: agent
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  selector:
+    app: maintenance-agent
+    component: agent
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8398
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maintenance-agent
+  namespace: software-maintenance
+  labels:
+    app: maintenance-agent
+    component: agent
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maintenance-agent
+      component: agent
+  template:
+    metadata:
+      labels:
+        app: maintenance-agent
+        component: agent
+        app.kubernetes.io/part-of: software-maintenance
+    spec:
+      terminationGracePeriodSeconds: 120
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 20001
+        fsGroup: 20001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: maintenance-agent
+          image: maintenance-agent:latest
+          imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8398
+          envFrom:
+            - configMapRef:
+                name: maintenance-agent-env-config
+            - secretRef:
+                name: maintenance-agent-secrets
+          env:
+            - name: PORT
+              value: "8398"
+            - name: NAMESPACE
+              value: software-maintenance
+            - name: REDIS_URL
+              value: redis://redis.truvag3-examples:6379/0
+            - name: TRUVAG3_REDIS_NAMESPACE
+              value: default
+            - name: TRUVAG3_AGENT_NAME
+              value: maintenance-agent
+            - name: TRUVAG3_AGENT_DOMAIN
+              value: software-maintenance
+            - name: TRUVAG3_DISCOVERY_RETRY
+              value: "true"
+            - name: TRUVAG3_DISCOVERY_RETRY_INTERVAL
+              value: 30s
+            - name: TRUVAG3_K8S_SERVICE_NAME
+              value: maintenance-agent
+            - name: TRUVAG3_K8S_SERVICE_PORT
+              value: "80"
+            - name: TRUVAG3_K8S_POD_APP_LABEL
+              value: maintenance-agent
+            - name: TRUVAG3_K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: TRUVAG3_K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MAINTENANCE_AGENT_PROFILE_FILE
+              value: /app/profiles/retail-order-maintenance.json
+            - name: APP_ENV
+              value: development
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.truvag3-examples:4318
+          resources:
+            requests:
+              cpu: 100m
+              memory: 160Mi
+            limits:
+              cpu: "1"
+              memory: 640Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /maintenance/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: maintenance-agent
+  namespace: software-maintenance
+  labels:
+    app: maintenance-agent
+    component: agent
+    app.kubernetes.io/part-of: software-maintenance
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: maintenance-agent.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: maintenance-agent
+                port:
+                  number: 80

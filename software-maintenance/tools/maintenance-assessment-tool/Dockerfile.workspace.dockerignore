@@ -1,0 +1,12 @@
+# Defense in depth: setup builds from private, allowlisted contexts.
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/.DS_Store
+**/notes
+**/bugs
+**/papers
+**/bin
+**/coverage*
+**/*.test

@@ -1,0 +1,38 @@
+# Opt-in local framework verification; published host dependencies remain unchanged.
+FROM golang:1.27.2-alpine AS builder
+RUN apk add --no-cache ca-certificates git
+WORKDIR /src
+COPY framework/ai/ ./framework/ai/
+COPY framework/core/ ./framework/core/
+COPY framework/memory/ ./framework/memory/
+COPY framework/orchestration/ ./framework/orchestration/
+COPY framework/resilience/ ./framework/resilience/
+COPY framework/telemetry/ ./framework/telemetry/
+COPY software-maintenance/go.mod software-maintenance/go.sum ./software-maintenance/
+COPY software-maintenance/tools/maintenance-publication-tool/ ./software-maintenance/tools/maintenance-publication-tool/
+COPY software-maintenance/internal/ ./software-maintenance/internal/
+WORKDIR /src/software-maintenance
+ENV GOWORK=off
+RUN go mod edit \
+    -replace=github.com/truvaagents/truva-g3/ai=../framework/ai \
+    -replace=github.com/truvaagents/truva-g3/core=../framework/core \
+    -replace=github.com/truvaagents/truva-g3/memory=../framework/memory \
+    -replace=github.com/truvaagents/truva-g3/orchestration=../framework/orchestration \
+    -replace=github.com/truvaagents/truva-g3/resilience=../framework/resilience \
+    -replace=github.com/truvaagents/truva-g3/telemetry=../framework/telemetry && \
+    go mod tidy && go mod download
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -buildvcs=false \
+    -ldflags='-w -s' -o /out/maintenance-publication-tool ./tools/maintenance-publication-tool
+
+FROM alpine:3.23
+LABEL org.truvag3.framework-source="workspace"
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -g 20001 -S appgroup && \
+    adduser -u 10001 -S appuser -G appgroup
+WORKDIR /app
+COPY --from=builder /out/maintenance-publication-tool ./maintenance-publication-tool
+COPY software-maintenance/profiles/ ./profiles/
+USER 10001:20001
+ENV PORT=8403
+EXPOSE 8403
+ENTRYPOINT ["/app/maintenance-publication-tool"]

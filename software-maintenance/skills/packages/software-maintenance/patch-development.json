@@ -1,0 +1,46 @@
+{
+  "display_name": "Bounded Patch Development",
+  "description": "Use when a maintenance repair request needs source investigation, reproduction, or a decision whether a minimal candidate and contract-grounded regression test are warranted in an isolated workspace.",
+  "domains": ["software-maintenance", "code-repair"],
+  "tags": ["candidate", "patch", "regression-test"],
+  "planning_instructions": [
+    "Establish the authoritative behavior, exact source snapshot, and a falsifiable failure explanation before staging a candidate.",
+    "Choose the narrowest useful source-tree, exact-file, and isolated-experiment reads for the current uncertainty; focus on the implicated behavior when existing evidence localizes it.",
+    "Keep the change minimal and preserve exact base-file digests so concurrent or out-of-scope source changes fail closed.",
+    "Create a regression test that reaches the intended assertion on the baseline and runs unchanged with the candidate. Before claiming reproduction, inspect the named failing assertion in the baseline artifact or a trusted verification receipt explicitly confirming that expected test; a nonzero exit alone can also mean a setup, compilation, or unrelated test failure.",
+    "Use profile-defined experiments for focused questions and owner-defined verification for the candidate's final execution evidence.",
+    "Choose no_change when inspected evidence supports the existing behavior, not_reproduced when an adequate reproduction attempt did not reproduce the claimed failure, and inconclusive when a material prerequisite remains unavailable or conflicting."
+  ],
+  "response_instructions": [
+    "Report only candidate, test, verification, job, and artifact identities returned by tools, with pending or failed execution states stated explicitly.",
+    "State what source and contract content was inspected and what reproduction was actually attempted. Use no_change only with evidence supporting existing behavior; use not_reproduced only with a meaningful reproduction attempt, and inconclusive for missing evidence or an investigation blocked before reproduction."
+  ],
+  "tool_hints": [
+    "For the repair investigation itself, consider maintenance-source-tool/read_source_file, search_source, and list_source_tree to inspect the applicable contract and implementation. Another agent's propose_maintenance_change or review_maintenance_change is delegation, not a source read or local repair operation.",
+    "When an isolated experiment or candidate is warranted, consider maintenance-workspace-tool/create_workspace for the admitted snapshot, run_experiment for a profile-approved experiment, and stage_candidate for proposed changes and regression tests. Select according to the current question and each capability's required inputs.",
+    "For an actual candidate needing execution evidence, consider maintenance-workspace-tool/run_verification; get_job and read_job_artifact can resolve pending state or inspect terminal output. A verification request requires an existing candidate and does not itself establish passing checks.",
+    "Connect capability calls with their documented direct outputs, preserving the request's case, observation, repository, snapshot, and workspace-profile identities without substituting unrelated digests or nested objects."
+  ],
+  "resources": [
+    {
+      "name": "candidate-checklist",
+      "description": "Checklist for staging a reviewable repair candidate.",
+      "load_when": "Load when evidence supports staging source changes and a regression test.",
+      "applies_to": ["planning", "continuation", "synthesis"],
+      "required_when_selected": true,
+      "content_type": "text/markdown",
+      "content": "Bind every existing file to the content SHA-256 returned by its exact source read; use the capability's documented absent-file marker for a new path. Keep source changes separate from regression-test changes and provide only the exact declared test-function name as the expected test. Preserve protected configuration and tests. A staged candidate is not verified: request owner-defined verification when returning a candidate, retain its direct handles, and treat pending, truncated, timed-out, setup-failed, assertion-failed, and successful outcomes as distinct facts."
+    }
+  ],
+  "activation_examples": {
+    "should_activate": [
+      "Propose a minimal fix and regression test for this reproduced order-total defect.",
+      "Inspect this snapshot and stage a bounded candidate if the contract violation is supported."
+    ],
+    "should_not_activate": [
+      "Independently review this existing candidate.",
+      "Publish the approved candidate as a draft pull request."
+    ]
+  },
+  "change_reason": "Keep patch-specific guidance optional and consume shared log and pending-job rules from always-required maintenance-safety"
+}

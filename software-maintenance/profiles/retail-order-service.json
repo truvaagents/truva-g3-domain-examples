@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "profile_id": "retail-order-service",
+  "assessment_ready": true,
+  "service_name": "retail-order-service",
+  "repository": {
+    "name": "truvaagents/retail-order-service",
+    "default_branch": "main"
+  },
+  "contract_references": [
+    {
+      "kind": "git",
+      "revision": "9b8dae6dde77512050847af998410764716655cd",
+      "path": "README.md"
+    }
+  ],
+  "upstream": {
+    "base_url": "http://retail-order-service.truvag3-examples.svc.cluster.local",
+    "endpoints": {
+      "catalog": "/catalog",
+      "observations": "/observations",
+      "evidence": "/evidence/{id}",
+      "business_outcome": "/orders/{id}",
+      "build_info": "/build-info"
+    }
+  },
+  "limits": {
+    "timeout_milliseconds": 5000,
+    "maximum_response_bytes": 65536,
+    "maximum_request_bytes": 16384,
+    "maximum_window_seconds": 600,
+    "retention_seconds": 86400,
+    "maximum_items": 50
+  },
+  "allowed_callers": [
+    "maintenance-agent",
+    "maintenance-repair-agent",
+    "maintenance-review-agent"
+  ],
+  "supported_evidence": [
+    "observation-feed",
+    "observation-evidence",
+    "business-outcome",
+    "release-context",
+    "runtime-configuration"
+  ],
+  "limitations": [
+    "The observation feed is advisory and is not a transactional outbox.",
+    "A deployed build identity is provenance, not a signed attestation.",
+    "The owner-approved service contract is pinned to the published target revision used by this acceptance run."
+  ]
+}
