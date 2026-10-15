@@ -1,14 +1,78 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/responsecontract"
+	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/orchestration"
 )
+
+func TestReviewObjectiveProseAdmission(t *testing.T) {
+	const limit = 8192
+	token := strings.Repeat("labelled-credential-", 3)
+	auth, err := newReviewAuthorizer(map[string]string{"maintenance-agent": token})
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent := &maintenanceReviewAgent{
+		BaseAgent: core.NewBaseAgent(reviewAgentName), auth: auth,
+		profiles: &reviewProfileStore{profiles: map[string]reviewProfile{"review": {
+			callerSet: map[string]struct{}{"maintenance-agent": {}},
+			Limits:    reviewLimits{MaximumRequestBytes: 32 << 10, MaximumObjectiveBytes: limit},
+		}}},
+	}
+	agent.Logger = nil
+	for _, tc := range []struct {
+		name, objective string
+		invalidID       bool
+		accepted        bool
+	}{
+		{"multiline", "Review the candidate.\n\tCompare the evidence.\r\nExplain the conclusion.", false, true},
+		{"at_byte_limit", strings.Repeat("é", limit/2), false, true},
+		{"over_byte_limit", strings.Repeat("é", limit/2+1), false, false},
+		{"empty", " \n\t", false, false},
+		{"control", "Review\x00candidate", false, false},
+		{"unicode_control", "Review\u0085candidate", false, false},
+		{"identifier_newline", "Review\nthis candidate", true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := reviewRequest{ProfileID: "review", CaseID: "labelled-case", CandidateID: "cand_" + strings.Repeat("a", 64), VerificationID: "verify_" + strings.Repeat("b", 64), Objective: tc.objective}
+			if tc.invalidID {
+				input.CandidateID += "\n"
+			}
+			body, err := json.Marshal(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request := httptest.NewRequest(http.MethodPost, "/review", strings.NewReader(string(body)))
+			request.Header.Set("Authorization", "Bearer "+token)
+			writer := httptest.NewRecorder()
+			agent.handleReview(writer, request)
+			var response core.ToolResponse
+			if err := json.Unmarshal(writer.Body.Bytes(), &response); err != nil {
+				t.Fatal(err)
+			}
+			// An absent orchestrator stops accepted input before any AI call.
+			wantCode, wantStatus := "INVALID_REVIEW_SCOPE", http.StatusBadRequest
+			if tc.accepted {
+				wantCode, wantStatus = "ORCHESTRATOR_INITIALIZING", http.StatusServiceUnavailable
+			}
+			if writer.Code != wantStatus || response.Error == nil || response.Error.Code != wantCode {
+				t.Fatalf("unexpected admission result: %d %s", writer.Code, writer.Body.String())
+			}
+			if !tc.accepted && !tc.invalidID && !strings.Contains(response.Error.Message, "8192 bytes") {
+				t.Fatalf("objective rejection lost its configured byte limit: %s", response.Error.Message)
+			}
+		})
+	}
+}
 
 func TestReviewSummaryProseAndReceiptBoundary(t *testing.T) {
 	profile := reviewProfile{Limits: reviewLimits{MaximumFindings: 32}}

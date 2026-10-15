@@ -40,13 +40,14 @@ type publicationProfile struct {
 }
 
 type publishRequest struct {
-	ProfileID      string `json:"profile_id"`
-	CaseID         string `json:"case_id"`
-	CandidateID    string `json:"candidate_id"`
-	VerificationID string `json:"verification_id"`
-	ReviewID       string `json:"review_id"`
-	Title          string `json:"title"`
-	Body           string `json:"body"`
+	ProfileID        string `json:"profile_id"`
+	RepositoryViewID string `json:"repository_view_id"`
+	CaseID           string `json:"case_id"`
+	CandidateID      string `json:"candidate_id"`
+	VerificationID   string `json:"verification_id"`
+	ReviewID         string `json:"review_id"`
+	Title            string `json:"title"`
+	Body             string `json:"body"`
 }
 
 type getPublicationRequest struct {
@@ -58,6 +59,7 @@ type getPublicationRequest struct {
 type publicationRecord struct {
 	SchemaVersion          int       `json:"schema_version"`
 	PublicationID          string    `json:"publication_id"`
+	RepositoryViewID       string    `json:"repository_view_id,omitempty"`
 	ProfileID              string    `json:"profile_id"`
 	ProfileSHA256          string    `json:"profile_sha256"`
 	CaseID                 string    `json:"case_id"`

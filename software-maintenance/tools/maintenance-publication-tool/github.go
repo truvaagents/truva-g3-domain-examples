@@ -160,8 +160,12 @@ func (client *githubPublicationClient) ensureDraftPullRequest(ctx context.Contex
 }
 
 func (client *githubPublicationClient) findPullRequests(ctx context.Context, profile publicationProfile, branch string) ([]githubPullRequest, error) {
+	return client.findPullRequestsWithState(ctx, profile, branch, "open")
+}
+
+func (client *githubPublicationClient) findPullRequestsWithState(ctx context.Context, profile publicationProfile, branch, state string) ([]githubPullRequest, error) {
 	query := make(url.Values)
-	query.Set("state", "open")
+	query.Set("state", state)
 	query.Set("head", profile.Owner+":"+branch)
 	query.Set("base", profile.BaseRef)
 	query.Set("per_page", "2")
@@ -218,6 +222,14 @@ func (client *githubPublicationClient) requestResponse(ctx context.Context, prof
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, profile.timeout())
 	defer cancel()
+	if err := keepPublicationAlive(requestCtx); err != nil {
+		return 0, err
+	}
+	if method != http.MethodGet {
+		if err := checkPublicationWrite(requestCtx); err != nil {
+			return 0, err
+		}
+	}
 	request, err := http.NewRequestWithContext(requestCtx, method, requestURL, reader)
 	if err != nil {
 		return 0, failPublication("github_request", false, err)

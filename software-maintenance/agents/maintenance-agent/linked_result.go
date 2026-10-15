@@ -9,6 +9,7 @@ import (
 
 	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/lifecycle"
 	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/observation"
+	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/responsecontract"
 	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/orchestration"
 	"github.com/truvaagents/truva-g3/telemetry"
@@ -58,7 +59,13 @@ func (agent *maintenanceAgent) validateLinkedDecision(ctx context.Context, input
 			telemetry.RecordSpanError(ctx, validationErr)
 		}
 		fields := map[string]interface{}{"operation": "validate_linked_decision", "status": status, "duration_ms": time.Since(started).Milliseconds(), "request_id": observation.ContextRequestID(ctx), "case_id": input.CaseID, "disposition": decision.Status}
-		attrs := []attribute.KeyValue{attribute.String("status", status), attribute.String("request_id", observation.ContextRequestID(ctx)), attribute.String("maintenance.case_id", input.CaseID)}
+		attrs := []attribute.KeyValue{attribute.String("request_id", observation.ContextRequestID(ctx)), attribute.String("status", status), attribute.String("maintenance.case_id", input.CaseID)}
+		var contractErr *responsecontract.ValidationError
+		if errors.As(validationErr, &contractErr) {
+			fields["validation_code"] = contractErr.Code
+			fields["validation_field"] = contractErr.Field
+			attrs = append(attrs, attribute.String("validation_code", contractErr.Code), attribute.String("validation_field", contractErr.Field))
+		}
 		for name, observed := range map[string]time.Time{"assessment": lookup.CheckedAt, "remediation": state.ObservedAt} {
 			if !observed.IsZero() {
 				age := agent.now().Sub(observed).Milliseconds()
@@ -86,7 +93,15 @@ func (agent *maintenanceAgent) validateLinkedDecision(ctx context.Context, input
 	for _, observation := range input.ObservationRefs {
 		belongs = belongs || observation == ref.ObservationID
 	}
-	if !belongs || ref.CheckID == "" || ref.AssessmentID == "" {
+	if !belongs {
+		return &responsecontract.ValidationError{
+			Code: "LINKED_OBSERVATION_MISMATCH", Field: "assessment.observation_id",
+			Expected: "the current applicability comparison's observation_id, matching this case's observation_refs",
+			Reason:   "the selected observation does not belong to this case",
+			Cause:    errors.New("linked assessment.observation_id must identify a current case observation"),
+		}
+	}
+	if ref.CheckID == "" || ref.AssessmentID == "" {
 		return invalid
 	}
 	if agent.httpClient == nil || agent.httpClient.Timeout <= 0 {
@@ -114,7 +129,7 @@ func (agent *maintenanceAgent) validateLinkedDecision(ctx context.Context, input
 	// Ages and deadlines are evaluated after network reads, not before them.
 	now := agent.now()
 	if !decision.NextCheck.NotBefore.After(now) || decision.NextCheck.NotBefore.After(now.Add(agent.lifecycleLimits.RevalidateAfter)) {
-		return errors.New("linked next_check deadline must be future and within the configured revalidation interval")
+		return linkedNextCheckError("the selected time is outside the configured revalidation window", decision.NextCheck.NotBefore, now, now.Add(agent.lifecycleLimits.RevalidateAfter))
 	}
 	if !lookup.PolicyConfigured || lookup.CoordinatorProfileID != agent.profile.CoordinatorProfileID || lookup.CoordinatorProfileSHA256 != agent.profile.ProfileSHA256 ||
 		lookup.ObservationID != ref.ObservationID || lookup.CheckID != ref.CheckID || !freshLinkedObservation(lookup.CheckedAt, now, agent.lifecycleLimits.RemediationMaxAge) {
@@ -142,8 +157,11 @@ func (agent *maintenanceAgent) validateLinkedDecision(ctx context.Context, input
 		return err
 	}
 	now = agent.now()
-	if !freshLinkedObservation(lookup.CheckedAt, now, agent.lifecycleLimits.RemediationMaxAge) || !decision.NextCheck.NotBefore.After(now) {
+	if !freshLinkedObservation(lookup.CheckedAt, now, agent.lifecycleLimits.RemediationMaxAge) {
 		return invalid
+	}
+	if !decision.NextCheck.NotBefore.After(now) {
+		return linkedNextCheckError("the selected time passed during evidence refresh", decision.NextCheck.NotBefore, now, assessment.RevalidateAfter)
 	}
 	if !current || accepted.Assessment.Version != assessment.Version || accepted.ComparedFactsDigest != assessment.Facts.ComparedFactsDigest ||
 		assessment.Facts.PolicySHA256 != lifecycle.PolicyDigest(agent.profile.AssessmentPolicy) || assessment.Facts.CheckID != ref.CheckID ||
@@ -151,7 +169,7 @@ func (agent *maintenanceAgent) validateLinkedDecision(ctx context.Context, input
 		return invalid
 	}
 	if decision.NextCheck.NotBefore.After(assessment.RevalidateAfter) {
-		return errors.New("linked next_check exceeds the assessment evidence deadline")
+		return linkedNextCheckError("the selected time exceeds the selected assessment's revalidate_after", decision.NextCheck.NotBefore, now, assessment.RevalidateAfter)
 	}
 	result.LinkedAssessment = &accepted.Assessment
 	result.LinkedAssessmentCheckedAt = &lookup.CheckedAt
@@ -199,6 +217,14 @@ func (agent *maintenanceAgent) validateLinkedDecision(ctx context.Context, input
 	result.LinkedRemediation = &state
 	result.Limitations = append(result.Limitations, "GitHub state does not establish production resolution; current-case publication fields remain empty for this historical link.")
 	return nil
+}
+
+func linkedNextCheckError(reason string, selected, now, deadline time.Time) error {
+	return &responsecontract.ValidationError{
+		Code: "LINKED_NEXT_CHECK_INVALID", Field: "next_check.not_before",
+		Reason:   fmt.Sprintf("%s (selected %s)", reason, selected.UTC().Format(time.RFC3339Nano)),
+		Expected: fmt.Sprintf("an RFC3339 time after %s and at or before %s, also within result_contract.maximum_next_check_delay_seconds; use the selected assessment's revalidate_after as an upper bound, and reassess if that window has expired", now.UTC().Format(time.RFC3339Nano), deadline.UTC().Format(time.RFC3339Nano)),
+	}
 }
 
 func freshLinkedObservation(observed, now time.Time, maximumAge time.Duration) bool {
