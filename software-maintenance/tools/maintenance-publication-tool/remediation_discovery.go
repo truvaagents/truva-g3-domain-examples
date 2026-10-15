@@ -38,13 +38,14 @@ type openRemediation struct {
 }
 
 type openRemediations struct {
-	ProfileID    string            `json:"profile_id"`
-	RepositoryID string            `json:"repository_id"`
-	BaseRef      string            `json:"base_ref"`
-	PullRequests []openRemediation `json:"pull_requests"`
-	Complete     bool              `json:"complete"`
-	ObservedAt   time.Time         `json:"observed_at"`
-	Limitations  []string          `json:"limitations"`
+	RepositoryViewID string            `json:"repository_view_id,omitempty"`
+	ProfileID        string            `json:"profile_id"`
+	RepositoryID     string            `json:"repository_id"`
+	BaseRef          string            `json:"base_ref"`
+	PullRequests     []openRemediation `json:"pull_requests"`
+	Complete         bool              `json:"complete"`
+	ObservedAt       time.Time         `json:"observed_at"`
+	Limitations      []string          `json:"limitations"`
 }
 
 type githubPullFile struct {
@@ -85,7 +86,7 @@ func readLimit(value *int, fallback int) int {
 	return fallback
 }
 
-func (operations *publicationOperations) listOpenRemediations(ctx context.Context, profile publicationProfile) (openRemediations, error) {
+func (operations *publicationOperations) readOpenRemediations(ctx context.Context, profile publicationProfile) (openRemediations, error) {
 	result := openRemediations{ProfileID: profile.PublicationProfileID, RepositoryID: profile.RepositoryID, BaseRef: profile.BaseRef,
 		PullRequests: []openRemediation{}, Limitations: []string{"Repository PR discovery is a lookup lead; title, state and commit identities do not establish issue applicability or deployment."}}
 	if operations.github == nil {
@@ -255,6 +256,10 @@ func (operations *publicationOperations) guardDuplicateProductionChange(ctx cont
 	if err != nil {
 		return err
 	}
+	return operations.guardDuplicateProductionListing(ctx, profile, candidate, reservation, listing)
+}
+
+func (operations *publicationOperations) guardDuplicateProductionListing(ctx context.Context, profile publicationProfile, candidate candidateRecord, reservation publicationRecord, listing openRemediations) error {
 	for _, pull := range listing.PullRequests {
 		changes, err := operations.remediationChanges(ctx, profile, remediationChangesRequest{ProfileID: profile.PublicationProfileID, PullRequestNumber: pull.PullRequestNumber, ExpectedHeadSHA: pull.HeadSHA})
 		if err != nil {
@@ -340,7 +345,7 @@ func (tool *maintenancePublicationTool) handleRemediationRead(writer http.Respon
 	if !ok {
 		return
 	}
-	ctx, cancel := context.WithTimeout(request.Context(), profile.timeout())
+	ctx, cancel := context.WithTimeout(core.WithRequestID(request.Context(), publicationRequestID(request)), profile.timeout())
 	defer cancel()
 	telemetry.AddSpanEvent(ctx, "maintenance.remediation.read_requested", attribute.String("request_id", publicationRequestID(request)), attribute.String("operation", capability))
 	var result any
@@ -358,14 +363,37 @@ func (tool *maintenancePublicationTool) handleRemediationRead(writer http.Respon
 }
 
 func (tool *maintenancePublicationTool) failRemediationRead(writer http.ResponseWriter, request *http.Request, capability, profileID string, started time.Time, err error) {
+	// A joined business refusal and storage failure has one response. Keep the
+	// refusal authoritative and expose the secondary failure as bounded metadata.
 	var failure *remediationFailure
-	if !errors.As(err, &failure) {
-		failure = &remediationFailure{status: http.StatusInternalServerError, code: "REMEDIATION_FAILED", message: "Existing-PR evidence could not be established", category: core.CategoryServiceError}
+	if errors.As(err, &failure) {
+		tool.writeRemediationFailure(writer, request, capability, profileID, started, failure, err)
+		return
+	}
+	var stateFailure *publicationFailure
+	if errors.As(err, &stateFailure) {
+		tool.failOperation(writer, request, capability, profileID, started, err)
+		return
+	}
+	failure = &remediationFailure{status: http.StatusInternalServerError, code: "REMEDIATION_FAILED", message: "Existing-PR evidence could not be established", category: core.CategoryServiceError}
+	tool.writeRemediationFailure(writer, request, capability, profileID, started, failure, err)
+}
+
+func (tool *maintenancePublicationTool) writeRemediationFailure(writer http.ResponseWriter, request *http.Request, capability, profileID string, started time.Time, failure *remediationFailure, original error) {
+	details := make(map[string]string, len(failure.details)+1)
+	for key, value := range failure.details {
+		details[key] = value
+	}
+	var secondary *publicationFailure
+	if errors.As(original, &secondary) {
+		details["publication_failure"] = secondary.kind
+		telemetry.AddSpanEvent(request.Context(), "maintenance.publication.secondary_failure",
+			attribute.String("request_id", publicationRequestID(request)), attribute.String("maintenance.failure_code", secondary.kind))
 	}
 	tool.record(request, capability, profileID, "error", failure.code, started)
 	setPublicationTraceHeaders(writer, request)
 	if failure.code == "REMEDIATION_RATE_LIMITED" {
 		writer.Header().Set("Retry-After", failure.details["retry_after"])
 	}
-	writePublicationErrorWithDetails(writer, failure.status, failure.code, failure.message, failure.category, failure.retryable, failure.details)
+	writePublicationErrorWithDetails(writer, failure.status, failure.code, failure.message, failure.category, failure.retryable, details)
 }

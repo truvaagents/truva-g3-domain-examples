@@ -374,11 +374,7 @@ func (agent *maintenanceAgent) confirmedPublication(input investigationInput, ex
 
 func (agent *maintenanceAgent) resultValidationEvidence(ctx context.Context, input investigationInput, execution *orchestration.ExecutionResult, err error) resultValidationEvidence {
 	// Only locally generated bounded validation facts, not model prose, escape.
-	message := "maintenance result validation failed"
-	var fieldErr *responsecontract.FieldError
-	if errors.As(err, &fieldErr) {
-		message = fieldErr.Error()
-	}
+	message := responsecontract.FailureMessage("maintenance result validation failed", err)
 	executionID := orchestration.GetRequestID(ctx)
 	if len(executionID) > 128 || !validCoordinatorText(executionID) {
 		executionID = ""

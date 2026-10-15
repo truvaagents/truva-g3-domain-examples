@@ -14,6 +14,10 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/truvaagents/truva-g3/core"
+	"github.com/truvaagents/truva-g3/telemetry"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type publicationOperations struct {
@@ -24,8 +28,8 @@ type publicationOperations struct {
 	now      func() time.Time
 }
 
-func (operations *publicationOperations) publish(ctx context.Context, profile publicationProfile, request publishRequest) (publicationRecord, error) {
-	if !profile.PublicationReady || operations.issuers == nil || operations.github == nil {
+func (operations *publicationOperations) publish(ctx context.Context, profile publicationProfile, request publishRequest) (out publicationRecord, returnedErr error) {
+	if !profile.PublicationReady || operations.issuers == nil || operations.github == nil || operations.store == nil {
 		return publicationRecord{}, failPublication("publication_not_ready", false, nil)
 	}
 	title, body, err := validatePublicationText(profile, request.Title, request.Body)
@@ -72,23 +76,42 @@ func (operations *publicationOperations) publish(ctx context.Context, profile pu
 	if err := validateReservedPublication(record, profile, request, bundle, titleDigest, bodyDigest, operations.now()); err != nil {
 		return publicationRecord{}, err
 	}
-	if record.Status == "succeeded" {
-		return record, nil
-	}
-	claim, err := operations.store.acquireClaim(ctx, publicationID, profile.claimTTL())
+	claim, err := operations.store.acquireClaim(ctx, publicationID, publicationLeaseTTL(profile))
 	if err != nil {
 		if errors.Is(err, errPublicationClaimed) {
 			return publicationRecord{}, failPublication("publication_claimed", true, err)
 		}
 		return publicationRecord{}, err
 	}
-	defer operations.store.releaseClaim(context.WithoutCancel(ctx), publicationID, claim)
+	ctx = withPublicationOwner(ctx, claim)
+	defer func() {
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), profile.timeout())
+		defer cancel()
+		if err := operations.store.releaseScopeOwner(cleanupCtx, profile); err != nil {
+			telemetry.RecordSpanError(ctx, err)
+			out = publicationRecord{}
+			returnedErr = errors.Join(returnedErr, err)
+		}
+		operations.store.releaseClaim(cleanupCtx, publicationID, claim)
+	}()
 
 	record, err = operations.store.get(ctx, publicationID)
 	if err != nil {
 		return publicationRecord{}, err
 	}
 	if record.Status == "succeeded" {
+		state, _, err := operations.store.readScope(ctx, profile)
+		if err != nil {
+			return publicationRecord{}, err
+		}
+		if state.Pending != nil && state.Pending.PublicationID == publicationID {
+			if err := operations.store.beginScope(ctx, profile, record); err != nil {
+				return publicationRecord{}, err
+			}
+			if err := operations.store.finishScope(ctx, profile, publicationID, true); err != nil {
+				return publicationRecord{}, err
+			}
+		}
 		return record, nil
 	}
 	fail := func(operationErr error) (publicationRecord, error) {
@@ -103,8 +126,43 @@ func (operations *publicationOperations) publish(ctx context.Context, profile pu
 		}
 		record.Status = "failed"
 		record.UpdatedAt = operations.now()
-		_ = operations.store.put(context.WithoutCancel(ctx), record, publicationTTL(operations.now(), record.ExpiresAt))
+		failureCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), profile.timeout())
+		defer cancel()
+		if storeErr := operations.store.putClaimed(failureCtx, record, publicationTTL(operations.now(), record.ExpiresAt)); storeErr != nil {
+			operationErr = errors.Join(operationErr, storeErr)
+		}
 		return publicationRecord{}, operationErr
+	}
+	if err := operations.store.beginScope(ctx, profile, record); err != nil {
+		return fail(err)
+	}
+	ctx = withPublicationKeepAlive(ctx, func(callCtx context.Context) error {
+		if err := operations.store.renewClaim(callCtx, publicationID, publicationLeaseTTL(profile)); err != nil {
+			return err
+		}
+		return operations.store.touchScope(callCtx, profile, publicationID)
+	})
+	defer func() {
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), profile.timeout())
+		defer cancel()
+		if err := operations.store.finishScope(cleanupCtx, profile, publicationID, out.Status == "succeeded"); err != nil {
+			telemetry.RecordSpanError(ctx, err)
+			telemetry.AddSpanEvent(ctx, "maintenance.publication.coordination_cleanup_failed",
+				attribute.String("request_id", core.GetRequestID(ctx)), attribute.String("maintenance.publication_id", publicationID))
+			out = publicationRecord{}
+			returnedErr = errors.Join(returnedErr, err)
+		}
+	}()
+	// Reconcile a lost response/final write before freshness checks can reject
+	// the publication's own PR. Keep the original case and artifact identities.
+	if gitSHAPattern.MatchString(record.CommitSHA) {
+		recovered, found, err := operations.recoverPublishedDraft(ctx, profile, record)
+		if err != nil {
+			return fail(err)
+		}
+		if found {
+			return recovered, nil
+		}
 	}
 
 	head, err := operations.github.getBranchHead(ctx, profile, profile.BaseRef)
@@ -122,7 +180,7 @@ func (operations *publicationOperations) publish(ctx context.Context, profile pu
 		return fail(failPublication("github_base_mismatch", false, nil))
 	}
 	checkCtx, cancel := context.WithTimeout(ctx, profile.timeout())
-	checkErr := operations.guardDuplicateProductionChange(checkCtx, profile, bundle.Candidate, record)
+	checkErr := operations.checkRepositoryView(checkCtx, profile, request, bundle.Candidate, record)
 	cancel()
 	if checkErr != nil {
 		// Missing evidence is a publication blocker. Retry with the same evidence
@@ -135,6 +193,17 @@ func (operations *publicationOperations) publish(ctx context.Context, profile pu
 		}
 		return fail(checkErr)
 	}
+	record.RepositoryViewID = request.RepositoryViewID
+	record.UpdatedAt = operations.now()
+	if err := operations.store.putClaimed(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
+		return publicationRecord{}, err
+	}
+	if err := operations.store.markScopeMutation(ctx, profile, publicationID); err != nil {
+		return fail(err)
+	}
+	ctx = withPublicationWriteCheck(ctx, func(writeCtx context.Context) error {
+		return operations.store.checkScopeMutation(writeCtx, profile, publicationID)
+	})
 
 	entries := make([]githubTreeEntry, 0, len(bundle.Candidate.Files))
 	for _, file := range bundle.Candidate.Files {
@@ -159,7 +228,7 @@ func (operations *publicationOperations) publish(ctx context.Context, profile pu
 	record.Status = "tree_created"
 	record.FailureCode = ""
 	record.UpdatedAt = operations.now()
-	if err := operations.store.put(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
+	if err := operations.store.putClaimed(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
 		return publicationRecord{}, err
 	}
 
@@ -173,7 +242,7 @@ func (operations *publicationOperations) publish(ctx context.Context, profile pu
 	record.CommitSHA = commitSHA
 	record.Status = "commit_created"
 	record.UpdatedAt = operations.now()
-	if err := operations.store.put(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
+	if err := operations.store.putClaimed(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
 		return publicationRecord{}, err
 	}
 	if err := operations.github.ensureBranch(ctx, profile, record.Branch, commitSHA); err != nil {
@@ -181,8 +250,12 @@ func (operations *publicationOperations) publish(ctx context.Context, profile pu
 	}
 	record.Status = "branch_created"
 	record.UpdatedAt = operations.now()
-	if err := operations.store.put(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
+	if err := operations.store.putClaimed(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
 		return publicationRecord{}, err
+	}
+	// Persist the point beyond which absence of a PR is not proof of no effect.
+	if err := operations.store.markPullRequest(ctx, profile, record); err != nil {
+		return fail(err)
 	}
 	pull, err := operations.github.ensureDraftPullRequest(ctx, profile, record.Branch, record.BaseSHA, commitSHA, title, body)
 	if err != nil {
@@ -195,10 +268,29 @@ func (operations *publicationOperations) publish(ctx context.Context, profile pu
 	record.Status = "succeeded"
 	record.FailureCode = ""
 	record.UpdatedAt = operations.now()
-	if err := operations.store.put(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
+	if err := operations.store.putClaimed(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
 		return publicationRecord{}, err
 	}
 	return record, nil
+}
+
+func (operations *publicationOperations) recoverPublishedDraft(ctx context.Context, profile publicationProfile, record publicationRecord) (publicationRecord, bool, error) {
+	pulls, err := operations.github.findPullRequestsWithState(ctx, profile, record.Branch, "all")
+	if err != nil || len(pulls) == 0 {
+		return publicationRecord{}, false, err
+	}
+	// Closed/replaced work is not permission to recreate a PR under an old intent.
+	pull, err := validateDraftPullRequest(pulls[0], profile, record.Branch, record.BaseSHA, record.CommitSHA)
+	if err != nil {
+		return publicationRecord{}, false, err
+	}
+	record.PullRequestID, record.PullRequestNumber, record.PullRequestURL = pull.ID, pull.Number, pull.HTMLURL
+	record.Draft, record.Status, record.FailureCode = pull.Draft, "succeeded", ""
+	record.UpdatedAt = operations.now()
+	if err := operations.store.putClaimed(ctx, record, publicationTTL(operations.now(), record.ExpiresAt)); err != nil {
+		return publicationRecord{}, false, err
+	}
+	return record, true, nil
 }
 
 func (operations *publicationOperations) get(ctx context.Context, profile publicationProfile, request getPublicationRequest) (publicationRecord, error) {

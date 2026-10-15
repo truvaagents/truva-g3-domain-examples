@@ -31,7 +31,8 @@ func (tool *maintenancePublicationTool) handlePublishDraftPR(writer http.Respons
 		tool.fail(writer, request, capability, profile.PublicationProfileID, started, http.StatusBadRequest, "INVALID_PUBLICATION_REFERENCE", "Publication references are invalid", core.CategoryInputError, false)
 		return
 	}
-	record, err := tool.operations.publish(request.Context(), profile, input)
+	ctx := core.WithRequestID(request.Context(), publicationRequestID(request))
+	record, err := tool.operations.publish(ctx, profile, input)
 	if err != nil {
 		tool.failOperation(writer, request, capability, profile.PublicationProfileID, started, err)
 		return
@@ -124,6 +125,10 @@ func (tool *maintenancePublicationTool) failOperation(writer http.ResponseWriter
 		if failure.kind == "publication_not_ready" {
 			status = http.StatusConflict
 			code = "PUBLICATION_NOT_READY"
+		} else if failure.kind == "state_unavailable" {
+			status = http.StatusServiceUnavailable
+			category = core.CategoryServiceError
+			code = "PUBLICATION_DEPENDENCY_UNAVAILABLE"
 		} else if failure.retryable {
 			status = http.StatusServiceUnavailable
 			category = core.CategoryServiceError

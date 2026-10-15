@@ -95,14 +95,20 @@ func newMaintenancePublicationToolFromEnvironment() (*maintenancePublicationTool
 
 func (tool *maintenancePublicationTool) registerCapabilities() {
 	tool.RegisterCapability(core.Capability{
-		Name: "list_open_remediations", Description: "Discovers open pull requests, including drafts and manually created work, in the authorized repository and configured base branch. Use to find prior work independently of memory. Returns pull_requests with number, URL, title, base_sha and head_sha, plus complete and observed_at; complete=false leaves coverage uncertain. Required: profile_id.",
+		Name: "reconcile_publication", Description: "Reconciles an original pending publication without GitHub writes or new approval. Use the exact origin_case_id as case_id and publication_id from PUBLICATION_COORDINATION_PENDING. Releases an abandoned pre-PR attempt or an exactly identified existing open/closed PR; unknown effects remain blocked. A resolution is external-effect evidence, not proof of issue applicability, verification, merge or deployment.",
+		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleReconcilePublication,
+		InputSummary:  &core.SchemaSummary{RequiredFields: []core.FieldHint{{Name: "profile_id", Type: "string"}, {Name: "case_id", Type: "string", Description: "Original pending publication's origin_case_id, not the current investigation's case."}, {Name: "publication_id", Type: "string"}}},
+		OutputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{{Name: "publication_id", Type: "string"}, {Name: "case_id", Type: "string"}, {Name: "disposition", Type: "string", Description: "abandoned_before_write, abandoned_before_pr, observed_open_pr, observed_closed_pr, or not_pending. not_pending establishes no publication outcome."}, {Name: "observed_at", Type: "string"}}, OptionalFields: []core.FieldHint{{Name: "pull_request_number", Type: "number"}, {Name: "pull_request_url", Type: "string"}}},
+	})
+	tool.RegisterCapability(core.Capability{
+		Name: "list_open_remediations", Description: "Discovers open PRs, including drafts and manually created work, for the authorized repository/base. Use to assess existing work before deciding whether new publication is warranted. Complete coverage includes repository_view_id: pass that exact value to publish_draft_pr; changed PR state requires fresh assessment. Returns PR numbers, titles, base/head identities, completeness and limitations. Required: profile_id.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: func(w http.ResponseWriter, r *http.Request) { tool.handleRemediationRead(w, r, false) },
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{{Name: "profile_id", Type: "string", Description: "Authorized publication profile selecting repository and base branch."}}},
 		OutputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "profile_id", Type: "string"}, {Name: "repository_id", Type: "string"}, {Name: "base_ref", Type: "string"},
 			{Name: "pull_requests", Type: "array", Description: "Entries include pull_request_number, pull_request_url, title, base_sha, head_sha and optional draft."},
 			{Name: "complete", Type: "boolean"}, {Name: "observed_at", Type: "string"}, {Name: "limitations", Type: "array"},
-		}},
+		}, OptionalFields: []core.FieldHint{{Name: "repository_view_id", Type: "string", Description: "Present for complete coverage. Repository-state precondition for publication; it certifies observed state, not issue applicability."}}},
 	})
 	tool.RegisterCapability(core.Capability{
 		Name: "get_remediation_changes", Description: "Reads a pull request's current state, explanation and changed files with bounded text patches. Use to assess whether discovered prior work addresses current evidence. Returns remediation with state, base_sha and head_sha, plus files, files_complete and limitations; this is repository evidence, not approval or proof of deployment. Required: profile_id, pull_request_number. Optional: expected_head_sha from discovery to detect changed work.",
@@ -131,10 +137,11 @@ func (tool *maintenancePublicationTool) registerCapabilities() {
 		OutputSummary: publicationOutputSummary(),
 	})
 	tool.RegisterCapability(core.Capability{
-		Name: "publish_draft_pr", Description: "Publishes only an exact verified and independently reviewed candidate to a deterministic scoped branch and opens a draft pull request. It cannot merge, approve, deploy, or alter repository policy.",
+		Name: "publish_draft_pr", Description: "Publishes a verified and independently reviewed candidate as a draft PR when assessed open-PR state still holds. Required repository_view_id comes from complete list_open_remediations evidence used for this decision. REPOSITORY_VIEW_CHANGED requires fresh PR inspection and reassessment; PUBLICATION_COORDINATION_PENDING requires reconciling the recorded publication. These refusals establish no issue applicability. It cannot merge, approve or deploy.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handlePublishDraftPR,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "profile_id", Type: "string", Example: "retail-order-publication"}, {Name: "case_id", Type: "string"},
+			{Name: "repository_view_id", Type: "string", Description: "Exact repository_view_id from complete open-PR discovery assessed for this decision. Preserve case/artifact identities when reconsidering changed state."},
 			{Name: "candidate_id", Type: "string"}, {Name: "verification_id", Type: "string"}, {Name: "review_id", Type: "string"},
 			{Name: "title", Type: "string"}, {Name: "body", Type: "string"},
 		}},
@@ -151,6 +158,7 @@ func publicationOutputSummary() *core.SchemaSummary {
 		{Name: "draft", Type: "boolean"}, {Name: "status", Type: "string"}, {Name: "created_at", Type: "string"},
 		{Name: "updated_at", Type: "string"}, {Name: "expires_at", Type: "string"}, {Name: "limitations", Type: "array"},
 	}, OptionalFields: []core.FieldHint{
+		{Name: "repository_view_id", Type: "string", Description: "Repository view accepted before this publication's Git writes; absent from older receipts."},
 		{Name: "candidate_tree_sha", Type: "string"}, {Name: "commit_sha", Type: "string"},
 		{Name: "pull_request_id", Type: "number"}, {Name: "pull_request_number", Type: "number"},
 		{Name: "pull_request_url", Type: "string"}, {Name: "failure_code", Type: "string"},

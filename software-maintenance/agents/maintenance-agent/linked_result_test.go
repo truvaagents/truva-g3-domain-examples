@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/lifecycle"
+	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/responsecontract"
 	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/orchestration"
 )
@@ -98,6 +100,9 @@ func checkLinkedResults(t *testing.T, client redis.UniversalClient, keys core.Re
 		{"expired_read", "existing_remediation", true}, {"new_failed_read", "existing_remediation", true}, {"changed_facts", "known_issue", true},
 		{"stale_planning_read_refreshed", "existing_remediation", false}, {"unrelated_planning_read", "existing_remediation", false},
 		{"wrong_observation", "known_issue", true}, {"wrong_profile", "known_issue", true}, {"cancelled", "existing_remediation", true},
+		{"historical_observation_reference", "existing_remediation", true}, {"foreign_observation_reference", "existing_remediation", true},
+		{"next_check_past", "existing_remediation", true}, {"next_check_after_interval", "existing_remediation", true},
+		{"next_check_after_assessment", "existing_remediation", true}, {"next_check_at_assessment", "existing_remediation", false},
 		{"policy_absent", "known_issue", true}, {"harness_failed", "known_issue", true}, {"unknown_deployment", "awaiting_deployment", true}, {"unsupported_resolution", "resolved_verified", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -111,6 +116,15 @@ func checkLinkedResults(t *testing.T, client redis.UniversalClient, keys core.Re
 				snapshot.State, snapshot.Merged, snapshot.MergeSHA = "merged", &truth, mergeSHA
 			}
 			switch tc.name {
+			case "next_check_past":
+				decision.NextCheck.NotBefore = now
+			case "next_check_after_interval":
+				decision.NextCheck.NotBefore = now.Add(time.Hour + time.Second)
+			case "next_check_after_assessment":
+				local.lifecycleLimits.RevalidateAfter = 2 * time.Hour
+				decision.NextCheck.NotBefore = assessment.RevalidateAfter.Add(time.Minute)
+			case "next_check_at_assessment":
+				decision.NextCheck.NotBefore = assessment.RevalidateAfter
 			case "closed":
 				snapshot.State = "closed_unmerged"
 			case "changed_head":
@@ -123,6 +137,10 @@ func checkLinkedResults(t *testing.T, client redis.UniversalClient, keys core.Re
 				comparison.Candidates = []lifecycle.Match{{Assessment: match.Assessment, Eligible: false, Reason: "facts_changed"}}
 			case "wrong_observation":
 				comparison.ObservationID = "unrelated-observation"
+			case "historical_observation_reference":
+				decision.Assessment.ObservationID = assessment.Facts.ObservationID
+			case "foreign_observation_reference":
+				decision.Assessment.ObservationID = "foreign-observation"
 			case "wrong_profile":
 				comparison.CoordinatorProfileSHA256 = "different-profile"
 			case "policy_absent":
@@ -187,6 +205,50 @@ func checkLinkedResults(t *testing.T, client redis.UniversalClient, keys core.Re
 			result, err := local.buildInvestigationResult(callCtx, investigationInput{CaseID: "current-case", ObservationRefs: []string{current.ObservationID}}, &orchestration.OrchestratorResponse{RequestID: "labelled-current-execution", Response: string(body)}, execution)
 			if (err != nil) != tc.fail {
 				t.Fatalf("status=%s expected_failure=%t error=%v", result.Status, tc.fail, err)
+			}
+			if strings.HasPrefix(tc.name, "next_check_") && tc.fail {
+				var contractErr *responsecontract.ValidationError
+				if !errors.As(err, &contractErr) || contractErr.Code != "LINKED_NEXT_CHECK_INVALID" || contractErr.Field != "next_check.not_before" {
+					t.Fatalf("deadline rejection lost its structured diagnostic: %v", err)
+				}
+				evidence := local.resultValidationEvidence(callCtx, investigationInput{}, execution, err)
+				if !strings.Contains(evidence.Error, "LINKED_NEXT_CHECK_INVALID") || !strings.Contains(evidence.Error, "revalidate_after") || !strings.Contains(evidence.Error, now.Format(time.RFC3339Nano)) || !strings.Contains(evidence.Error, decision.NextCheck.NotBefore.Format(time.RFC3339Nano)) {
+					t.Fatalf("stored diagnostic lost the allowed time window: %q", evidence.Error)
+				}
+				if tc.name == "next_check_after_assessment" && !strings.Contains(evidence.Error, assessment.RevalidateAfter.Format(time.RFC3339Nano)) {
+					t.Fatalf("assessment deadline missing from feedback: %q", evidence.Error)
+				}
+			}
+			if tc.name == "historical_observation_reference" || tc.name == "foreign_observation_reference" {
+				var contractErr *responsecontract.ValidationError
+				if !errors.As(err, &contractErr) || contractErr.Code != "LINKED_OBSERVATION_MISMATCH" || contractErr.Field != "assessment.observation_id" || calls != 0 {
+					t.Fatalf("identity rejection lost its diagnostic or dispatched a refresh: error=%v calls=%d", err, calls)
+				}
+				evidence := local.resultValidationEvidence(callCtx, investigationInput{}, execution, err)
+				if !strings.Contains(evidence.Error, "LINKED_OBSERVATION_MISMATCH") || !strings.Contains(evidence.Error, "assessment.observation_id") || strings.Contains(evidence.Error, decision.Assessment.ObservationID) {
+					t.Fatalf("stored diagnostic lost field guidance or echoed an identifier: %q", evidence.Error)
+				}
+				cases, storeErr := newCaseStore(client, keys)
+				if storeErr != nil {
+					t.Fatal(storeErr)
+				}
+				caseID := "labelled-" + tc.name
+				caseKey := cases.caseKey(caseID)
+				cleanupKeys = append(cleanupKeys, caseKey)
+				record, marshalErr := json.Marshal(caseRecord{CaseID: caseID, CurrentTaskID: "labelled-task", Status: "running"})
+				if marshalErr != nil {
+					t.Fatal(marshalErr)
+				}
+				if storeErr := client.Set(ctx, caseKey, record, time.Minute).Err(); storeErr != nil {
+					t.Fatal(storeErr)
+				}
+				if storeErr := cases.markResultValidationFailed(ctx, caseID, "labelled-task", evidence, now); storeErr != nil {
+					t.Fatal(storeErr)
+				}
+				stored, storeErr := cases.get(ctx, caseID)
+				if storeErr != nil || stored.Status != "failed" || stored.Result != nil || stored.ValidationEvidence == nil || stored.ValidationEvidence.Error != evidence.Error || stored.ValidationEvidence.Publication != nil {
+					t.Fatalf("case failed to preserve the identity diagnostic without a positive result: %+v error=%v", stored, storeErr)
+				}
 			}
 			if !tc.fail && (result.Status != tc.status || result.PublicationID != "" || result.LinkedAssessment == nil || result.LinkedAssessment.OriginCaseID != remediation.OriginCaseID || result.NextCheck == nil) {
 				t.Fatal("linked attribution or current publication distinction lost")

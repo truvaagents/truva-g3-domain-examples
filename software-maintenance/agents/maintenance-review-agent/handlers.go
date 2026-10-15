@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -45,9 +46,14 @@ func (agent *maintenanceReviewAgent) handleReview(writer http.ResponseWriter, re
 	}
 	input.Objective = strings.TrimSpace(input.Objective)
 	if !caseIDPattern.MatchString(input.CaseID) || !candidateIDPattern.MatchString(input.CandidateID) ||
-		!verificationIDPattern.MatchString(input.VerificationID) || input.Objective == "" ||
-		len(input.Objective) > profile.Limits.MaximumObjectiveBytes || !validReviewText(input.Objective) {
-		agent.fail(writer, request, capability, started, http.StatusBadRequest, "INVALID_REVIEW_SCOPE", "Review identifiers or objective are invalid", core.CategoryInputError, false)
+		!verificationIDPattern.MatchString(input.VerificationID) {
+		agent.fail(writer, request, capability, started, http.StatusBadRequest, "INVALID_REVIEW_SCOPE", "Use the exact case_id, candidate_id and verification_id returned by their owning capabilities", core.CategoryInputError, false)
+		return
+	}
+	// Objectives are prose; keep identifier and receipt fields single-line.
+	if len(input.Objective) > profile.Limits.MaximumObjectiveBytes || !responsecontract.ValidSummaryText(input.Objective) {
+		agent.fail(writer, request, capability, started, http.StatusBadRequest, "INVALID_REVIEW_SCOPE",
+			fmt.Sprintf("objective must be non-empty UTF-8 prose within %d bytes (received %d bytes); line breaks and tabs are allowed, other control characters are invalid", profile.Limits.MaximumObjectiveBytes, len(input.Objective)), core.CategoryInputError, false)
 		return
 	}
 	orch := agent.GetOrchestrator()

@@ -26,6 +26,7 @@ type boundaryRedis struct {
 	redis.UniversalClient
 	values             map[string]string
 	failSucceededWrite bool
+	failScopeComplete  bool
 }
 
 func (r *boundaryRedis) Get(_ context.Context, key string) *redis.StringCmd {
@@ -60,7 +61,43 @@ func (r *boundaryRedis) SetNX(ctx context.Context, key string, v any, ttl time.D
 	r.Set(ctx, key, v, ttl)
 	return redis.NewBoolResult(true, nil)
 }
-func (r *boundaryRedis) Eval(_ context.Context, _ string, keys []string, args ...any) *redis.Cmd {
+func (r *boundaryRedis) Eval(ctx context.Context, _ string, keys []string, args ...any) *redis.Cmd {
+	if len(keys) == 2 && len(args) == 3 {
+		if r.values[keys[1]] != args[0] {
+			return redis.NewCmdResult(int64(0), nil)
+		}
+		if err := r.Set(ctx, keys[0], args[1], time.Hour).Err(); err != nil {
+			return redis.NewCmdResult(nil, err)
+		}
+		return redis.NewCmdResult(int64(1), nil)
+	}
+	if len(keys) == 1 && len(args) == 2 {
+		if r.values[keys[0]] != args[0] {
+			return redis.NewCmdResult(int64(0), nil)
+		}
+		return redis.NewCmdResult(int64(1), nil)
+	}
+	if len(args) == 6 {
+		owner := r.values[keys[1]]
+		if owner != args[2] && (args[4] != "1" || owner != "") {
+			return redis.NewCmdResult(int64(0), nil)
+		}
+		if r.values[keys[0]] == args[0] {
+			var scope publicationScope
+			if r.failScopeComplete && json.Unmarshal([]byte(args[1].(string)), &scope) == nil && scope.Generation != "" && scope.Pending == nil {
+				r.failScopeComplete = false
+				return redis.NewCmdResult(nil, errors.New("fixture: scope completion unavailable"))
+			}
+			r.values[keys[0]] = args[1].(string)
+			if args[5] == "1" {
+				delete(r.values, keys[1])
+			} else {
+				r.values[keys[1]] = args[2].(string)
+			}
+			return redis.NewCmdResult(int64(1), nil)
+		}
+		return redis.NewCmdResult(int64(0), nil)
+	}
 	if r.values[keys[0]] == args[0] {
 		delete(r.values, keys[0])
 		return redis.NewCmdResult(int64(1), nil)
@@ -112,7 +149,7 @@ func TestPublicationProducerConsumer(t *testing.T) {
 	if err := json.Unmarshal(line, &hello); err != nil {
 		t.Fatalf("workspace fixture handshake: %s: %v", line, err)
 	}
-	for _, mode := range []string{"success", "final_store_failure", "newer", "wrong_candidate", "wrong_review_identity", "rejected", "expired", "missing", "read_error"} {
+	for _, mode := range []string{"success", "final_store_failure", "ambiguous_pr_response", "closed_after_lost_write", "scope_release_failure", "stale_repository_view", "missing_repository_view", "newer", "wrong_candidate", "wrong_review_identity", "rejected", "expired", "missing", "read_error"} {
 		t.Run(mode, func(t *testing.T) {
 			request := publishRequest{ProfileID: "publication", CaseID: "case", CandidateID: hello.CandidateID, VerificationID: hello.VerificationID, Title: "Verified scoped repair", Body: "Synthetic receipt-boundary verification"}
 			var review reviewReceipt
@@ -154,8 +191,10 @@ func TestPublicationProducerConsumer(t *testing.T) {
 			}
 			var calls atomic.Int32
 			var pullCreates atomic.Int32
+			var writes atomic.Int32
 			var providerMu sync.Mutex
 			var createdPull map[string]any
+			var failReconciliation bool
 			files := make([]githubPullFile, 0, len(bundle.Candidate.Files))
 			for _, file := range bundle.Candidate.Files {
 				content, err := base64.StdEncoding.DecodeString(file.ContentBase64)
@@ -175,6 +214,9 @@ func TestPublicationProducerConsumer(t *testing.T) {
 				providerMu.Lock()
 				defer providerMu.Unlock()
 				calls.Add(1)
+				if r.Method != http.MethodGet {
+					writes.Add(1)
+				}
 				w.Header().Set("Content-Type", "application/json")
 				var response any
 				status := http.StatusOK
@@ -184,6 +226,11 @@ func TestPublicationProducerConsumer(t *testing.T) {
 				case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/commits/"):
 					response = map[string]any{"sha": bundle.Workspace.RevisionSHA, "commit": map[string]any{"tree": map[string]string{"sha": bundle.Workspace.TreeSHA}}}
 				case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/pulls"):
+					if failReconciliation {
+						failReconciliation = false
+						w.WriteHeader(http.StatusServiceUnavailable)
+						return
+					}
 					response = []any{}
 					if createdPull != nil {
 						response = []any{createdPull}
@@ -197,6 +244,10 @@ func TestPublicationProducerConsumer(t *testing.T) {
 					pullCreates.Add(1)
 					createdPull = map[string]any{"id": 1, "number": 1, "html_url": "https://github.invalid/fixture/service/pull/1", "title": request.Title, "body": request.Body, "changed_files": len(files), "draft": true, "state": "open", "base": map[string]any{"ref": "main", "sha": bundle.Workspace.RevisionSHA, "repo": map[string]string{"full_name": "fixture/service"}}, "head": map[string]any{"ref": publicationBranch(profile, request), "sha": strings.Repeat("9", 40), "repo": map[string]string{"full_name": "fixture/service"}}}
 					response = createdPull
+					if mode == "ambiguous_pr_response" {
+						failReconciliation = true
+						status = http.StatusServiceUnavailable
+					}
 				case r.Method == http.MethodPost:
 					status = http.StatusCreated
 					response = map[string]string{"sha": strings.Repeat("9", 40)}
@@ -214,21 +265,52 @@ func TestPublicationProducerConsumer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			op := publicationOperations{issuers: issuers, github: &githubPublicationClient{baseURL: origin, token: strings.Repeat("g", 40), httpClient: github.Client()}, store: &publicationStore{client: &boundaryRedis{values: map[string]string{}, failSucceededWrite: mode == "final_store_failure"}}, now: func() time.Time { return hello.Now }}
+			op := publicationOperations{issuers: issuers, github: &githubPublicationClient{baseURL: origin, token: strings.Repeat("g", 40), httpClient: github.Client()}, store: &publicationStore{client: &boundaryRedis{values: map[string]string{}, failSucceededWrite: mode == "final_store_failure" || mode == "closed_after_lost_write", failScopeComplete: mode == "scope_release_failure"}}, now: func() time.Time { return hello.Now }}
+			request.RepositoryViewID = repositoryViewIdentity(profile, "", []openRemediation{})
+			if mode == "stale_repository_view" {
+				request.RepositoryViewID = "prview_" + strings.Repeat("0", 64)
+			}
+			if mode == "missing_repository_view" {
+				request.RepositoryViewID = ""
+			}
 			result, err := op.publish(ctx, profile, request)
-			if mode == "final_store_failure" {
+			if mode == "final_store_failure" || mode == "closed_after_lost_write" || mode == "scope_release_failure" || mode == "ambiguous_pr_response" {
 				var failure *publicationFailure
-				if !errors.As(err, &failure) || failure.kind != "state_unavailable" || pullCreates.Load() != 1 {
+				if !errors.As(err, &failure) || pullCreates.Load() != 1 {
 					t.Fatalf("lost-write fixture did not reach the final boundary: %v, PR creates=%d", err, pullCreates.Load())
 				}
+				if mode == "closed_after_lost_write" {
+					providerMu.Lock()
+					createdPull["state"] = "closed"
+					providerMu.Unlock()
+				}
+				before := writes.Load()
 				result, err = op.publish(ctx, profile, request)
+				if writes.Load() != before {
+					t.Fatal("recovery repeated a Git write")
+				}
+				if mode == "closed_after_lost_write" {
+					if err == nil || pullCreates.Load() != 1 {
+						t.Fatal("closed publication was recreated")
+					}
+					return
+				}
 			}
-			if mode == "success" || mode == "final_store_failure" {
+			if mode == "success" || mode == "final_store_failure" || mode == "scope_release_failure" || mode == "ambiguous_pr_response" {
 				if err != nil || result.Status != "succeeded" || !result.Draft || result.PullRequestNumber != 1 || calls.Load() == 0 {
 					t.Fatalf("publication failed: %+v %v calls=%d", result, err, calls.Load())
 				}
 				if pullCreates.Load() != 1 {
 					t.Fatalf("same publication created %d PRs", pullCreates.Load())
+				}
+			} else if mode == "stale_repository_view" || mode == "missing_repository_view" {
+				code := "REPOSITORY_VIEW_CHANGED"
+				if mode == "missing_repository_view" {
+					code = "REPOSITORY_VIEW_REQUIRED"
+				}
+				requireRemediationCode(t, err, code)
+				if writes.Load() != 0 {
+					t.Fatal("unassessed repository state allowed Git writes")
 				}
 			} else if err == nil || calls.Load() != 0 {
 				t.Fatalf("unsafe acceptance: %v, GitHub calls=%d", err, calls.Load())
