@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/toolruntime"
 	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/telemetry"
 )
@@ -53,7 +52,7 @@ func runPublication() error {
 	tool.Logger.Info("Maintenance Publication Tool starting", map[string]interface{}{"operation": "startup", "service": publicationToolName, "port": port, "profile_count": len(tool.profiles.profiles)})
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	return toolruntime.Run(ctx, framework.Run, tool.Shutdown, tool.Config.HTTP.ShutdownTimeout)
+	return framework.Run(ctx)
 }
 
 func publicationPort() (int, error) {

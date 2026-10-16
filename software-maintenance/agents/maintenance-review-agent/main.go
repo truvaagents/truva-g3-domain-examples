@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/toolruntime"
 	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/orchestration/redisprovider"
 	"github.com/truvaagents/truva-g3/telemetry"
@@ -94,7 +93,7 @@ func runReview() error {
 		}
 	}()
 	agent.Logger.Info("Maintenance Review Agent starting", map[string]interface{}{"operation": "startup", "service": reviewAgentName, "port": port})
-	return toolruntime.Run(ctx, framework.Run, agent.Stop, agent.Config.HTTP.ShutdownTimeout)
+	return framework.Run(ctx)
 }
 
 func reviewPort() (int, error) {

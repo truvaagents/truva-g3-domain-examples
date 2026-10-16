@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/toolruntime"
 	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/telemetry"
 )
@@ -58,7 +57,7 @@ func runWorkspace() error {
 	tool.Logger.Info("Maintenance Workspace Tool starting", map[string]interface{}{"operation": "startup", "service": workspaceToolName, "port": port, "profile_count": len(tool.profiles.profiles)})
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	return toolruntime.Run(ctx, framework.Run, tool.Shutdown, tool.Config.HTTP.ShutdownTimeout)
+	return framework.Run(ctx)
 }
 
 func workspacePort() (int, error) {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -12,7 +11,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/responsecontract"
-	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/orchestration"
 )
 
@@ -143,28 +141,18 @@ func latestCandidateVerification(steps []orchestration.StepResult, profile repai
 }
 
 func latestRepairToolData(steps []orchestration.StepResult, agentName, capability string, destination any) error {
-	for index := len(steps) - 1; index >= 0; index-- {
-		step := steps[index]
-		if !step.Success || step.Skipped || step.AgentName != agentName || step.Capability != capability {
-			continue
-		}
-		var envelope struct {
-			Success bool            `json:"success"`
-			Data    json.RawMessage `json:"data"`
-			Error   *core.ToolError `json:"error"`
-		}
-		if err := decodeRepairStrictBytes([]byte(step.Response), &envelope); err != nil {
-			return fmt.Errorf("decode %s response: %w", capability, err)
-		}
-		if !envelope.Success || len(envelope.Data) == 0 {
-			return fmt.Errorf("%s returned no successful data", capability)
-		}
-		if err := decodeRepairPartialBytes(envelope.Data, destination); err != nil {
-			return fmt.Errorf("decode %s data: %w", capability, err)
-		}
-		return nil
+	index, found := orchestration.LastSuccessfulStep(steps, orchestration.StepResultFilter{AgentName: agentName, Capability: capability})
+	if !found {
+		return errRepairStepNotFound
 	}
-	return errRepairStepNotFound
+	data, err := orchestration.SuccessfulToolData(steps[index])
+	if err != nil {
+		return fmt.Errorf("decode %s response: %w", capability, err)
+	}
+	if err := decodeRepairPartialBytes(data, destination); err != nil {
+		return fmt.Errorf("decode %s data: %w", capability, err)
+	}
+	return nil
 }
 
 func validateRepairDecision(profile repairProfile, decision *repairDecision) error {

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	maintenanceconfig "github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/config"
-	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/toolruntime"
 	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/memory"
 	"github.com/truvaagents/truva-g3/orchestration"
@@ -244,7 +243,7 @@ func runCoordinator() error {
 		"collection_redis_deployment": profile.Collection.PrivateRedisDeployment,
 		"investigation_workers":       investigationWorkerCount,
 	})
-	return toolruntime.Run(ctx, framework.Run, agent.Stop, agent.Config.HTTP.ShutdownTimeout)
+	return framework.Run(ctx)
 }
 
 func coordinatorPort() (int, error) {
