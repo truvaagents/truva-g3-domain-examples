@@ -12,10 +12,10 @@ profile changes, and Public-release readiness. The README is the operator guide;
 this file gives coding assistants the execution order and safety boundaries.
 
 1. **Check release and repository access before promising a working install.**
-   The current module pins are published v0.6.0; use Go 1.27.2+ and the release
+   The current module pins are published v0.6.1; use Go 1.27.2+ and the release
    build path below. Keep `GOWORK=off` for published-dependency verification and
    do not silently add Go replacements. Shared setup helpers should come from
-   v0.6.0 or a reviewed compatible newer framework checkout. Pin only a fresh
+   v0.6.1 or a reviewed compatible newer framework checkout. Pin only a fresh
    clone without local work; do not switch an existing dirty checkout merely
    to run this example. Workspace images are an explicit
    framework-development option, not an installation prerequisite. The retail
@@ -82,7 +82,7 @@ this file gives coding assistants the execution order and safety boundaries.
 6. **Validate and deploy all eight components**, not just the coordinator:
 
    ```bash
-   # Run from software-maintenance/ using published v0.6.0 dependencies.
+   # Run from software-maintenance/ using published v0.6.1 dependencies.
    export MAINTENANCE_FRAMEWORK_SOURCE=release
    (
      set -e

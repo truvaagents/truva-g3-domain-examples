@@ -175,7 +175,7 @@ With collection disabled, rebuild only the evidence tool. Its consumers can
 remain stopped or on their old configuration while you finish preparation.
 
 ```bash
-# Use the example's pinned, published framework modules (v0.6.0).
+# Use the example's pinned, published framework modules (v0.6.1).
 export MAINTENANCE_FRAMEWORK_SOURCE=release
 ./setup.sh rebuild evidence
 ```
