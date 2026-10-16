@@ -386,28 +386,18 @@ func (agent *maintenanceAgent) resultValidationEvidence(ctx context.Context, inp
 }
 
 func latestCoordinatorStepData(steps []orchestration.StepResult, agentName, capability string, destination any) error {
-	for index := len(steps) - 1; index >= 0; index-- {
-		step := steps[index]
-		if !step.Success || step.Skipped || step.AgentName != agentName || step.Capability != capability {
-			continue
-		}
-		var envelope struct {
-			Success bool            `json:"success"`
-			Data    json.RawMessage `json:"data"`
-			Error   *core.ToolError `json:"error"`
-		}
-		if err := decodeCoordinatorBytes([]byte(step.Response), &envelope); err != nil {
-			return fmt.Errorf("decode %s response: %w", capability, err)
-		}
-		if !envelope.Success || len(envelope.Data) == 0 {
-			return fmt.Errorf("%s returned no successful data", capability)
-		}
-		if err := decodeCoordinatorPartialBytes(envelope.Data, destination); err != nil {
-			return fmt.Errorf("decode %s data: %w", capability, err)
-		}
-		return nil
+	index, found := orchestration.LastSuccessfulStep(steps, orchestration.StepResultFilter{AgentName: agentName, Capability: capability})
+	if !found {
+		return errCoordinatorStepNotFound
 	}
-	return errCoordinatorStepNotFound
+	data, err := orchestration.SuccessfulToolData(steps[index])
+	if err != nil {
+		return fmt.Errorf("decode %s response: %w", capability, err)
+	}
+	if err := decodeCoordinatorPartialBytes(data, destination); err != nil {
+		return fmt.Errorf("decode %s data: %w", capability, err)
+	}
+	return nil
 }
 
 func normalizeCoordinatorStrings(values []string, maximum int) []string {

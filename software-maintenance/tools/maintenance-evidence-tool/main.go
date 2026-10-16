@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/serviceevidence"
-	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/toolruntime"
 	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/telemetry"
 )
@@ -66,7 +65,7 @@ func runEvidence() error {
 	})
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	return toolruntime.Run(ctx, framework.Run, tool.Shutdown, tool.Config.HTTP.ShutdownTimeout)
+	return framework.Run(ctx)
 }
 
 func configuredPort() (int, error) {

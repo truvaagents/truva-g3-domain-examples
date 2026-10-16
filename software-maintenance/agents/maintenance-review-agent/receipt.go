@@ -16,7 +16,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/responsecontract"
-	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/orchestration"
 )
 
@@ -99,36 +98,22 @@ func reviewEvidenceFailure(field, expected string, cause error) error {
 }
 
 func exactToolStep(steps []orchestration.StepResult, agentName, capability string, parameters map[string]string, destination any) error {
-	for index := len(steps) - 1; index >= 0; index-- {
-		step := steps[index]
-		if !step.Success || step.Skipped || step.AgentName != agentName || step.Capability != capability {
-			continue
-		}
-		matches := true
-		for name, expected := range parameters {
-			actual, ok := step.Parameters[name].(string)
-			if !ok || actual != expected {
-				matches = false
-				break
-			}
-		}
-		if !matches {
-			continue
-		}
-		var envelope struct {
-			Success bool            `json:"success"`
-			Data    json.RawMessage `json:"data"`
-			Error   *core.ToolError `json:"error"`
-		}
-		if err := decodeReviewStrictBytes([]byte(step.Response), &envelope); err != nil || !envelope.Success || len(envelope.Data) == 0 {
-			return errors.New("latest exact capability result has an invalid envelope")
-		}
-		if err := decodeReviewPartialBytes(envelope.Data, destination); err != nil {
-			return fmt.Errorf("latest exact capability result is invalid: %w", err)
-		}
-		return nil
+	filter := orchestration.StepResultFilter{AgentName: agentName, Capability: capability, Parameters: make(map[string]any, len(parameters))}
+	for name, value := range parameters {
+		filter.Parameters[name] = value
 	}
-	return errReviewStepNotFound
+	index, found := orchestration.LastSuccessfulStep(steps, filter)
+	if !found {
+		return errReviewStepNotFound
+	}
+	data, err := orchestration.SuccessfulToolData(steps[index])
+	if err != nil {
+		return fmt.Errorf("latest exact capability result has an invalid envelope: %w", err)
+	}
+	if err := decodeReviewPartialBytes(data, destination); err != nil {
+		return fmt.Errorf("latest exact capability result is invalid: %w", err)
+	}
+	return nil
 }
 
 func validateDecision(profile reviewProfile, decision *reviewDecision) error {

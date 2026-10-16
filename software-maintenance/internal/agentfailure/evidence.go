@@ -11,17 +11,8 @@ import (
 // Context attributes application projections to the child execution, not the
 // incoming parent's request. Missing or conflicting evidence remains unknown.
 func Context(ctx context.Context, response *orchestration.OrchestratorResponse, execution *orchestration.ExecutionResult) context.Context {
-	var responseID, executionID string
-	if response != nil {
-		responseID = response.RequestID
-	}
-	if execution != nil {
-		executionID, _ = execution.Metadata[orchestration.MetadataKeyExecutionRequestID].(string)
-	}
-	requestID := responseID
-	if requestID == "" {
-		requestID = executionID
-	} else if executionID != "" && executionID != requestID {
+	requestID, err := orchestration.ExecutionRequestID(response, execution)
+	if err != nil {
 		requestID = ""
 	}
 	return orchestration.WithRequestID(ctx, requestID)

@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/truvaagents/truva-g3-domain-examples/software-maintenance/internal/toolruntime"
 	"github.com/truvaagents/truva-g3/core"
 	"github.com/truvaagents/truva-g3/telemetry"
 )
@@ -52,7 +51,7 @@ func runAssessment() error {
 	tool.Logger.Info("Maintenance Assessment Tool starting", map[string]interface{}{"operation": "startup", "service": assessmentToolName, "port": port, "profile_count": 1})
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	return toolruntime.Run(ctx, framework.Run, tool.Shutdown, tool.Config.HTTP.ShutdownTimeout)
+	return framework.Run(ctx)
 }
 
 func assessmentPort() (int, error) {
