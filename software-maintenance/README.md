@@ -21,10 +21,10 @@ README for the current setup and operational requirements.
 
 ## Setup
 
-> **Framework version:** this example pins the published TruvaG3 **v0.6.0**
+> **Framework version:** this example pins the published TruvaG3 **v0.6.1**
 > modules and requires **Go 1.27.2 or newer**. Release builds are the default;
 > no local framework replacements are needed. A framework checkout is still
-> required for shared setup helpers and infrastructure; use v0.6.0 or a reviewed
+> required for shared setup helpers and infrastructure; use v0.6.1 or a reviewed
 > compatible newer checkout. Fresh-install live
 > acceptance remains a separate gate; see Public-release readiness below.
 
@@ -84,7 +84,7 @@ From your chosen workspace parent directory, clone both repositories as siblings
 (skip the clone command for a checkout you already have; preserve local work):
 
 ```bash
-git clone --branch v0.6.0 https://github.com/truvaagents/truva-g3.git
+git clone --branch v0.6.1 https://github.com/truvaagents/truva-g3.git
 git clone https://github.com/truvaagents/truva-g3-domain-examples.git
 cd truva-g3/examples/travel-chat-agent
 ./setup.sh help
@@ -275,9 +275,8 @@ configure an organization-owned bot identity before real publication and repin.
 
 Set `OPENROUTER_API_KEY` in **each agent's** `.env` to use the exercised OpenRouter configuration. Leave
 other provider keys empty if you want to force that route. The template routes
-planning to `openai/gpt-6.1-sol`, synthesis/default work to
-`deepseek/deepseek-v4.1-flash`, and fast auxiliary work to
-`openai/gpt-6-luna`. These are explicit example choices, not promises about
+planning and synthesis/default work to `deepseek/deepseek-v4.1-flash`, with
+fast auxiliary work on `openai/gpt-6-luna`. These are explicit example choices, not promises about
 framework defaults. Tools do not need AI keys.
 
 #### Readiness and safe profile changes
@@ -678,6 +677,73 @@ Keep these boundaries in mind:
 - Crash-safe task recovery and sandbox isolation need their own verification;
   a successful local execution does not establish those guarantees.
 
+### Publication decisions and concurrent cases
+
+Before deciding to create a draft PR, the coordinator assesses existing work
+through `list_open_remediations` and any relevant PR-change reads. Complete
+discovery returns `repository_view_id`, an opaque reference to that repository's
+open PRs and revisions. The coordinator passes the exact value to
+`publish_draft_pr` with its candidate, verification and review references.
+
+The publication tool checks that view again before writing to GitHub. A new,
+closed or changed PR returns `REPOSITORY_VIEW_CHANGED` with the current PR numbers;
+the agent can inspect fresh evidence and reassess its next action. Incomplete
+coverage blocks publication. An unchanged view remains usable even when read
+earlier; this is a state comparison rather than an arbitrary age limit.
+
+The tool also coordinates publications across cases and replicas in the same
+repository/base branch. Investigation, repair and verification can run in
+parallel. Only one publication intent can write at a time. If a GitHub response
+or the final store write is lost, that intent remains pending after its worker
+lease expires. `PUBLICATION_COORDINATION_PENDING` supplies its original case,
+publication, branch and base references. Use `reconcile_publication` with the
+original `origin_case_id` as `case_id`, the returned `publication_id`, and the
+authorized `profile_id`. For example, its input has this shape (replace the
+placeholders with the returned values):
+
+```json
+{"profile_id":"your-publication-profile","case_id":"original-case-id","publication_id":"pub_<returned-64-character-digest>"}
+```
+
+This capability performs GitHub reads and updates the tool's coordination record;
+it creates no Git objects, branches or PRs. It refuses while the original attempt
+still owns a live lease. After that attempt ends or its lease expires:
+
+- `abandoned_before_write` releases a reservation that never reached Git writes.
+- `abandoned_before_pr` releases preparation that never reached PR creation;
+  unused Git objects or a scoped branch may remain.
+- `observed_open_pr` / `observed_closed_pr` release an intent after identifying
+  its exact branch and commit in an existing PR, even if approval receipts have
+  expired. This records the external effect, not approval or issue applicability.
+- `PUBLICATION_OUTCOME_UNRESOLVED` retains the intent when a PR request may have
+  reached GitHub but its outcome cannot be established. Retry reconciliation
+  when authoritative evidence is available. It does not clear uncertainty on a timer.
+- `not_pending` means there is no matching current pending intent; it proves
+  neither PR creation nor absence. A repeated successful reconciliation returns
+  its stored observation while that remains the latest scope resolution.
+
+Before a new publication decision, inspect current open PRs again. Recording a
+new reconciliation resolution changes the repository view, so an older assessed
+view cannot authorize new work. A read-only repeat of that resolution or a
+`not_pending` response does not advance the view.
+The tool recovers an existing matching open draft before checking the view again;
+a closed or changed historical PR is not automatically recreated. This does not
+automatically restart failed investigations or renew their admission allowance.
+
+The repository coordination record has no TTL: expiring an uncertain intent
+would permit a duplicate write. Worker leases expire and use distinct attempt
+tokens; stale workers cannot overwrite receipts or clear a successor's reservation.
+The lease uses `max(claim_ttl_seconds, 2 × timeout_milliseconds)` (after converting
+to the same units), renewed before bounded GitHub operations. Publication receipts
+retain their existing configured TTL. New intents retain the commit needed for
+reconciliation independently of that TTL. Legacy unresolved intents without
+sufficient identity evidence remain blocked; do not clear Redis to bypass them.
+
+The existing exact production-byte comparison remains an additional refusal.
+The agent evaluates whether differently written changes fix the same defect;
+sharing a file alone does not establish that. These controls do not provide
+atomicity against independent GitHub writers or prove semantic equivalence.
+
 ### Continuous monitoring: current boundary and recommended extension
 
 **Current implementation:** automatic but bounded runs. There is no continuous
@@ -836,6 +902,22 @@ longer matches the read used for that operation. Re-read current evidence and
 re-evaluate; it is not permission to bypass verification. A Job wait ending is
 also not a Job failure: `get_job` can return pending while Kubernetes continues.
 
+Review objectives are prose: line breaks and tabs are accepted within the review
+profile's `maximum_objective_bytes` (8,192 bytes in the shipped profile). Identifier
+and receipt validation is separate. `INVALID_REVIEW_SCOPE` identifies invalid
+references or reports the objective's byte limit and received size.
+
+For `known_issue`, `existing_remediation` and `awaiting_deployment`, the final
+`next_check.not_before` must remain in the future after evidence refresh and
+fit both the configured revalidation interval and the selected assessment's
+absolute `revalidate_after`. The earlier bound applies. A selected time that has
+passed or exceeds either bound returns `LINKED_NEXT_CHECK_INVALID` for `next_check.not_before`,
+with the selected time and allowed window retained in validation feedback.
+The server does not move that time automatically. An expired or inapplicable
+assessment is rejected separately; the timing error code does not describe every
+evidence failure. Refresh applicability and reassess when evidence expires.
+A recorded next check is guidance, not a scheduler job.
+
 GitHub read cooldowns expose `retry_not_before` and `Retry-After`. An explicit
 `retryable:false` stops same-step retries; a later invocation may retry after
 the deadline. This capability does not provide durable waiting/resumption.
@@ -942,7 +1024,7 @@ template into their own configuration and keep pod grace longer than drains.
 
 | Symptom | First checks |
 | --- | --- |
-| Unknown framework symbols in a build | Check that this example's module pins are v0.6.0, Go is 1.27.2+, and the build uses `GOWORK=off` without local replacements; use `setup.sh` rather than an older copied module file |
+| Unknown framework symbols in a build | Check that this example's module pins are v0.6.1, Go is 1.27.2+, and the build uses `GOWORK=off` without local replacements; use `setup.sh` rather than an older copied module file |
 | Startup rejects credentials | Match identity groups, keep different callers distinct, supply at least 32 characters per service token |
 | Workspace/publication refuses startup | Ready profile requires isolation attestation or explicit development mode; publication-ready profile requires write enablement/credentials |
 | Profile mismatch / stale receipt | Recompute affected pins, rebuild both coordinator and assessment where applicable; drain before policy cutover |
@@ -960,12 +1042,12 @@ template into their own configuration and keep pod grace longer than drains.
 | Infrastructure ownership | Implemented: setup operates maintenance workloads only and refuses shared infrastructure creation. |
 | Credential ownership | Implemented: component `.env.example` files, explicit backed-up migration, per-component validation and caller/receiver comparisons. |
 | All-components entry point | Implemented: `deploy-all` and `test-all`; checks stop on failure. |
-| Offline setup verification | Passed: 36 checks via `node setup.test.mjs` (Node.js required for these development checks only), using synthetic credentials and recording helpers; no real cluster or AI requests. |
+| Offline setup verification | Passed: 45 checks via `node setup.test.mjs` (Node.js required for these development checks only), using synthetic credentials and recording helpers; no real cluster or AI requests. |
 | Workspace image builds | Passed: all eight images built through `setup.sh image`, using the merged framework snapshot. Docker verified; Podman not live-tested in this packaging pass. |
-| Published release | Passed: all five direct framework dependencies pin v0.6.0; all eight binaries and release Docker images build without workspace replacements. |
+| Published release | Passed: v0.6.1 pins, module verification, all eight binary/image builds, vet and existing race tests. Running binaries were inspected and link published v0.6.1 modules without replacements. |
 | Target-service safety and public release | Pending: maintainers review the service for safe public consumption, then explicitly authorize its public release. Changing repository visibility is not a setup step. |
 | Fork portability | Pending: make the service's currently hardcoded repository provenance configurable and validated, then verify source reads and draft PR creation entirely inside a user-owned fork. Public visibility alone does not close this gate. |
-| Live acceptance | Existing-cluster v0.6.0 WELCOME100 run passed on 2026-10-13: all eight components deployed, skills/preflight passed, scheduler-triggered repair produced verified draft PR #16, and telemetry/assessment readback passed. Cold bootstrap, external-fork portability and a v0.6.0 open-PR repeat remain unverified. |
+| Live acceptance | Existing-cluster v0.6.1 WELCOME100 run passed on 2026-10-16: ordinary traffic and scheduled collection produced reviewed draft PR #26; all three executions completed and assessment/trace readback passed. Cold bootstrap, external-fork portability and a v0.6.1 open-PR repeat remain unverified. Historical v0.6.0 evidence is retained below. |
 
 ### Packaging review and verification
 
@@ -999,9 +1081,41 @@ image verification uses an exact snapshot of merged framework commit
 all eight images built successfully through the example's setup script.
 Container builds alone do not close the live-acceptance gate above.
 
+### v0.6.1 release adoption verification (2026-10-16)
+
+All three agents and five tools use published v0.6.1 dependencies. Their entry
+points await framework-managed serving and draining; result readers use the
+framework's execution-inspection helpers while keeping domain receipt checks
+inside this example. No planning workflow or outcome gate was replaced.
+
+The existing Kind cluster was reused. All eight components and the shared
+system-utilities tool were rebuilt through setup scripts, and their running
+binary metadata confirmed v0.6.1 with no local replacements. Health checks,
+all 11 skills and profile/admission preflight passed.
+
+Sixteen ordinary quantity-three WELCOME100 orders exercised normal one-in-five
+sampling. A finite one-case admission run let the scheduler start one automatic
+investigation. The coordinator completed nine phases and 28 steps, repair four
+phases and 18 steps, and review one phase and 16 steps. All final steps succeeded.
+Two concurrent-evidence reads returned a retryable 503 and succeeded on retry
+with identical parameters; their error observations remain in the trace.
+
+The baseline regression failed at 2700 cents, while the candidate produced the
+contract-required 2900 cents and passed the protected suite and vet. Independent
+review approved it, and draft PR #26 contained only the checkout correction and
+regression test. The assessment and publication reference were read back, all
+three executions were inspected in Registry Viewer, and the distributed trace
+contained 693 spans across nine services. The run made 38 recorded model calls
+through OpenRouter with no failed calls or output-limit finishes.
+
+Collection was disabled after acceptance and matching assessment/coordinator
+profiles were redeployed. Each component remains at one replica. This verifies
+the existing-cluster release path; it does not establish the still-pending cold
+bootstrap or external-fork acceptance gates above.
+
 ### v0.6.0 release adoption verification (2026-10-13)
 
-The example now uses published v0.6.0 modules with Go 1.27.2. `go mod tidy`
+This historical verification used published v0.6.0 modules with Go 1.27.2. `go mod tidy`
 updated only the selected dependency graph; no local replacements were added.
 The release-image checks found and fixed missing `COPY internal/ ./internal/`
 instructions in the source, workspace and publication tools' release Dockerfiles.
@@ -1064,7 +1178,7 @@ Current boundaries remain explicit:
 - Automatic admission is currently finite per run; indefinitely unattended
   monitoring needs the explicit continuous-mode extension described under
   [Operational triggers and run controls](#operational-triggers-and-run-controls).
-- Published dependencies are pinned to v0.6.0. Fresh-install live verification
+- Published dependencies are pinned to v0.6.1. Fresh-install live verification
   remains pending; repository paths and component configuration are prepared here.
 - Cancellation protection is a best-effort application guard; crash-safe task
   delivery/recovery is not established here.
@@ -1082,15 +1196,15 @@ Current boundaries remain explicit:
 The relevant framework contracts live in the framework repository, not private
 investigation notes:
 
-- [Agent Development Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.0/docs/building/AGENT_DEVELOPMENT_GUIDE.md)
-  and [Tool Development Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.0/docs/building/TOOL_DEVELOPMENT_GUIDE.md),
-  plus the [Agent Skills Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.0/docs/orchestration/AGENT_SKILLS_GUIDE.md).
-- [Framework Design Principles](https://github.com/truvaagents/truva-g3/blob/v0.6.0/FRAMEWORK_DESIGN_PRINCIPLES.md),
-  [Distributed Tracing Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.0/docs/observability/DISTRIBUTED_TRACING_GUIDE.md)
-  and [Logging Implementation Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.0/docs/observability/LOGGING_IMPLEMENTATION_GUIDE.md).
-- [Core architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.0/core/ARCHITECTURE.md),
-  [orchestration architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.0/orchestration/ARCHITECTURE.md)
-  and [telemetry architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.0/telemetry/ARCHITECTURE.md).
+- [Agent Development Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/building/AGENT_DEVELOPMENT_GUIDE.md)
+  and [Tool Development Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/building/TOOL_DEVELOPMENT_GUIDE.md),
+  plus the [Agent Skills Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/orchestration/AGENT_SKILLS_GUIDE.md).
+- [Framework Design Principles](https://github.com/truvaagents/truva-g3/blob/v0.6.1/FRAMEWORK_DESIGN_PRINCIPLES.md),
+  [Distributed Tracing Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/observability/DISTRIBUTED_TRACING_GUIDE.md)
+  and [Logging Implementation Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/observability/LOGGING_IMPLEMENTATION_GUIDE.md).
+- [Core architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.1/core/ARCHITECTURE.md),
+  [orchestration architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.1/orchestration/ARCHITECTURE.md)
+  and [telemetry architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.1/telemetry/ARCHITECTURE.md).
 
 These links pin the framework version used by this example. When upgrading,
 review the new release's contracts and the actual implementation together.
