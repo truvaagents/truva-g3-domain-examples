@@ -25,8 +25,8 @@ README for the current setup and operational requirements.
 > modules and requires **Go 1.27.2 or newer**. Release builds are the default;
 > no local framework replacements are needed. A framework checkout is still
 > required for shared setup helpers and infrastructure; use v0.6.1 or a reviewed
-> compatible newer checkout. Fresh-install live
-> acceptance remains a separate gate; see Public-release readiness below.
+> compatible newer checkout. Fresh-install live acceptance remains a separate
+> gate; see Public-release readiness below.
 
 **Start here:** clone the sibling repositories and bootstrap shared infrastructure
 through the travel example, then configure credentials/profiles and the target
@@ -43,7 +43,7 @@ alone is not the complete solution.
 - [Skills, profiles and evidence](#skills-profiles-and-evidence)
 - [Profile preparation guide](PROFILE_SETUP_GUIDE.md): worked fork example, service version, hash-update order and troubleshooting
 - [Run an automatic investigation](#run-an-automatic-investigation)
-- [Inspect and verify the outcome](#inspect-and-verify-the-outcome)
+- [Inspect and verify the outcome](#inspect-and-verify-the-outcome), including [read-only monitoring commands](#copyable-read-only-monitoring-commands)
 - [Budgets and timeouts](#budgets-and-timeouts)
 - [Operations and troubleshooting](#operations-and-troubleshooting)
 - [Public-release readiness](#public-release-readiness)
@@ -113,7 +113,7 @@ and local ingress before proceeding:
 ```bash
 kubectl config current-context
 kubectl get pods -n truvag3-examples
-curl --fail --silent --show-error http://registry.localhost/health
+curl --fail --silent --show-error http://registry.localhost/api/health
 ```
 
 Check pod readiness, and open `http://registry.localhost/` and
@@ -146,9 +146,10 @@ repository**, and validates that both PR head and base belong there. It does not
 implement a fork-to-upstream contribution workflow. No upstream write access is
 needed when source, deployment and publication all refer to your fork.
 
-After the service's safety review and public release, fork through GitHub and clone your fork as the local
-`retail-order-service` directory beside the framework checkout. Retain Git history;
-the contract commit referenced by the profile must exist in that repository.
+After the service's safety review and public release, fork it through GitHub and
+clone your fork into a local `retail-order-service` directory beside the framework
+checkout. Retain Git history; the contract commit referenced by the profile must
+exist in that repository.
 Choose a baseline commit whose behavior you intend to investigate, deploy that
 exact committed source, and leave the resulting repair PR unmerged for the
 duplicate-avoidance check. A repository already containing a repair is not an
@@ -179,19 +180,21 @@ authorized users can access it; external readers should wait for release rather
 than request upstream write permissions. The intended public walkthrough uses
 each reader's own fork, credentials and local deployment.
 
-There is also a separate portability prerequisite: the inspected retail-service
-`setup.sh` writes `truvaagents/retail-order-service` into build provenance and
-`build.go` requires that literal. The evidence tool compares that value against
-the service profile. Therefore **forking and editing profiles alone is not yet
-a working setup**. The target service needs a reviewed repository-identity
-configuration/build change, preserving provenance validation, before this path
-can be live-verified. Do not bypass the comparison or label upstream provenance
-as belonging to your fork. This is a target-service portability item, not a new
-planner or framework capability.
+Support for configuring the retail service's repository identity is available on
+`main` starting with commit `c714bf1`. Its setup derives the compiled repository
+identity from its GitHub `origin` or a validated `ORDER_BUILD_REPOSITORY`
+build-time override. Clone a target-service revision containing that change;
+earlier revisions hardcode the upstream identity. Check that the target service's
+README documents this option. Building from a fork must produce
+`/build-info.repository` naming that fork. The evidence tool compares
+it against the service profile; retain that comparison. The Go module path can
+remain upstream because this service is an application, not an imported library.
+Public visibility alone does not verify a fork's source, credentials or PR path.
+The full acceptance run in a user-owned fork remains pending.
 
-Once that prerequisite is available, prepare the service profile first. With
-collection disabled, deploy/rebuild the evidence tool and read its authenticated
-`get_service_profile` response to obtain the canonical `profile_version`.
+Prepare the service profile first. With collection disabled, deploy or rebuild
+the evidence tool and read its authenticated `get_service_profile` response to
+obtain the canonical `profile_version`.
 Update repair/review/coordinator service-version pins; edit the source and
 publication repository settings and propagate raw-file pins in dependency order.
 Then run the complete validation/deployment sequence below. Do not enable paid
@@ -224,9 +227,10 @@ component `.env` files. Run `validate` after migration.
 
 `validate` checks every component separately, compares caller/receiver
 identities and coordinator/assessment summary limits, and verifies the supplied
-profiles' raw-file dependency pins. It does not contact an AI provider, verify GitHub permissions, or
-prove network isolation. Ready workspace/publication profiles still require
-their explicit safety/write settings before validation can pass.
+profiles' raw-file dependency pins. It does not contact an AI provider, verify
+GitHub permissions, or prove network isolation. Ready workspace/publication
+profiles still require their explicit safety/write settings before validation
+can pass.
 
 The supplied Kubernetes manifests explicitly set profile paths, service URLs,
 Redis connection/namespace, component identity and telemetry endpoints. These
@@ -273,11 +277,12 @@ Keep Actions/workflow paths denied and grant only the repository scope required.
 The shipped commit author is a placeholder, not the developer's personal identity;
 configure an organization-owned bot identity before real publication and repin.
 
-Set `OPENROUTER_API_KEY` in **each agent's** `.env` to use the exercised OpenRouter configuration. Leave
-other provider keys empty if you want to force that route. The template routes
-planning and synthesis/default work to `deepseek/deepseek-v4.1-flash`, with
-fast auxiliary work on `openai/gpt-6-luna`. These are explicit example choices, not promises about
-framework defaults. Tools do not need AI keys.
+Set `OPENROUTER_API_KEY` in **each agent's** `.env` to use the exercised OpenRouter
+configuration. Leave other provider keys empty if you want to force that route.
+The template routes planning and synthesis/default work to
+`deepseek/deepseek-v4.1-flash`, with fast auxiliary work on `openai/gpt-6-luna`.
+These are explicit example choices, not promises about framework defaults.
+Tools do not need AI keys.
 
 #### Readiness and safe profile changes
 
@@ -285,9 +290,9 @@ New to profile pins? Start with [Understand the fingerprints](PROFILE_SETUP_GUID
 and the [worked fork example](PROFILE_SETUP_GUIDE.md#worked-example-your-own-fork).
 
 Collection is disabled in the shipped coordinator profile. Other profiles carry
-ready settings from verified development work. The component templates deliberately keep
-network attestation and publication writes off; filling secrets alone is not
-enough to run those ready profiles.
+ready settings from verified development work. The component templates
+deliberately keep network attestation and publication writes off; filling secrets
+alone is not enough to run those ready profiles.
 
 - Confirm the service URL, repository, contract commit, serving release and all
   prerequisite pins describe the deployment you own.
@@ -399,8 +404,7 @@ matching coordinator/assessment profile bytes—not backend health, provider
 credentials or complete evidence access. It first checks the selected Kind
 cluster/context and local profile/summary consistency. Live profile-byte checks
 apply when admission is enabled; they do not attest every live environment value.
-Finish with the traffic-driven
-verification below.
+Finish with the traffic-driven verification below.
 
 ## Architecture and responsibilities
 
@@ -852,12 +856,28 @@ Do not submit a maintenance task by hand to claim automatic acceptance.
    included traffic helper does not call AI or submit maintenance tasks:
 
 ```bash
-# Export ORDER_API_TOKEN from the target service's operator configuration.
-# Keep it out of command history and captured evidence.
+# From software-maintenance/, using the intended local Kind cluster.
+# setup.sh in the target service creates this Secret; it is not an .env value.
 evidence_dir="$(mktemp -d)"
-GOWORK=off go run ./diagnostics/automatic-pilot -mode order -quantity 2 \
-  -promotion WELCOME100 -output "$evidence_dir"
+(
+  set -euo pipefail
+  set +x
+  ORDER_API_TOKEN="$(
+    kubectl --context "kind-${CLUSTER_NAME:-truvag3-demo-$(whoami)}" \
+      --namespace truvag3-examples get secret retail-order-service-auth -o json |
+      jq -er '.data.ORDER_API_TOKEN | select(type == "string" and length > 0) | @base64d'
+  )"
+  export ORDER_API_TOKEN
+  GOWORK=off go run ./diagnostics/automatic-pilot -mode order -quantity 2 \
+    -promotion WELCOME100 -output "$evidence_dir"
+)
 ```
+
+The subshell disables command tracing and passes the token to the helper through
+its environment. It does not print the token or write it to a file. Configure
+`CLUSTER_NAME` in the invoking shell if using a nondefault cluster. The helper
+uses fixed local ingress URLs and the supplied catalog SKU; another topology
+or catalog requires adapting the helper rather than only editing profiles.
 
 The helper uses only the standard library; invoke it from this directory. Repeat
 with ordinary variations as needed within the service's limits. One successful
@@ -891,6 +911,52 @@ Debug stores contain actual prompts and tool-result data. Configure access,
 retention and sanitization appropriate to your environment before using real
 sensitive services. Export needed records before their TTLs expire; runtime
 Redis data and local diagnostic files are not a permanent evidence archive.
+
+### Copyable read-only monitoring commands
+
+Run from `software-maintenance/` in the same session that created `evidence_dir`
+above. If starting a new session, create a new private evidence directory first.
+Source only trusted local configuration. These commands read existing state;
+they do not submit tasks, call an AI provider or create PRs.
+
+```bash
+(
+  set -euo pipefail
+  set +x
+  source agents/maintenance-agent/.env
+  : "${MAINTENANCE_AGENT_API_TOKEN:?Configure the coordinator operator token}"
+  export MAINTENANCE_AGENT_API_TOKEN
+  GOWORK=off go run ./diagnostics/automatic-pilot -mode state \
+    -output "$evidence_dir"
+)
+```
+
+The output shows whether collection is enabled, the run ledger and its deadline.
+Wait for a scheduled tick, then use `./setup.sh logs coordinator` or Registry
+Viewer to find the admitted case, task and execution IDs. An order's observation
+ID is not its case ID. Replace the placeholders below with those recorded IDs:
+
+```bash
+(
+  set -euo pipefail
+  set +x
+  source agents/maintenance-agent/.env
+  : "${MAINTENANCE_AGENT_API_TOKEN:?Configure the coordinator operator token}"
+  export MAINTENANCE_AGENT_API_TOKEN
+  GOWORK=off go run ./diagnostics/automatic-pilot -mode case \
+    -id REPLACE_WITH_CASE_ID -output "$evidence_dir"
+  GOWORK=off go run ./diagnostics/automatic-pilot -mode task \
+    -id REPLACE_WITH_TASK_ID -output "$evidence_dir"
+)
+GOWORK=off go run ./diagnostics/automatic-pilot -mode execution \
+  -id REPLACE_WITH_EXECUTION_ID -output "$evidence_dir"
+```
+
+Repeat the execution read for the delegated repair and review execution IDs,
+when present. Inspect captured HTTP statuses as well as response bodies: the
+helper retains non-2xx responses as evidence rather than treating them as
+successful results.
+An execution's success is separate from proof that the actual draft PR is correct.
 
 A red delegated lifecycle in the Viewer can be genuine even if a child produced
 a useful artifact or opened a PR. Read its termination reason and result-validation
@@ -1046,7 +1112,7 @@ template into their own configuration and keep pod grace longer than drains.
 | Workspace image builds | Passed: all eight images built through `setup.sh image`, using the merged framework snapshot. Docker verified; Podman not live-tested in this packaging pass. |
 | Published release | Passed: v0.6.1 pins, module verification, all eight binary/image builds, vet and existing race tests. Running binaries were inspected and link published v0.6.1 modules without replacements. |
 | Target-service safety and public release | Pending: maintainers review the service for safe public consumption, then explicitly authorize its public release. Changing repository visibility is not a setup step. |
-| Fork portability | Pending: make the service's currently hardcoded repository provenance configurable and validated, then verify source reads and draft PR creation entirely inside a user-owned fork. Public visibility alone does not close this gate. |
+| Fork portability | Support for configuring the repository identity is available on the target service's `main` starting with commit `c714bf1`, with build-time resolution from GitHub `origin` and an explicit override. Adoption in the selected fork and deployment, followed by a complete run that reads source and creates a draft PR inside a user-owned fork, remains pending; public visibility alone does not close this gate. |
 | Live acceptance | Existing-cluster v0.6.1 WELCOME100 run passed on 2026-10-16: ordinary traffic and scheduled collection produced reviewed draft PR #26; all three executions completed and assessment/trace readback passed. Cold bootstrap, external-fork portability and a v0.6.1 open-PR repeat remain unverified. Historical v0.6.0 evidence is retained below. |
 
 ### Packaging review and verification

@@ -20,10 +20,10 @@ this file gives coding assistants the execution order and safety boundaries.
    to run this example. Workspace images are an explicit
    framework-development option, not an installation prerequisite. The retail
    service is intended to become public only after its maintainers complete its
-   safety review and explicitly authorize publication. Until then, access is restricted to
-   authorized users; report unavailable access as a release prerequisite, not
-   a setup failure. Do not change repository visibility, grant access, or publish
-   the service as part of setting up this example.
+   safety review and explicitly authorize publication. Until then, access is
+   restricted to authorized users; report unavailable access as a release
+   prerequisite, not a setup failure. Do not change repository visibility, grant
+   access, or publish the service as part of setting up this example.
 2. **Clone and bootstrap before deploying domain workloads.** Follow
    [Clone and bootstrap the framework once](README.md#clone-and-bootstrap-the-framework-once)
    and the framework's [Getting Started guide](https://github.com/truvaagents/truva-g3/blob/main/GETTING_STARTED.md).
@@ -57,10 +57,13 @@ this file gives coding assistants the execution order and safety boundaries.
    Current publication code supports same-repository PRs,
    not cross-fork PR submission to upstream. Do not request upstream write access.
    Follow [the fork preparation checklist](README.md#use-your-own-repository-for-the-demo).
-   The service's hardcoded build repository identity is a known prerequisite to
-   resolve before fork acceptance; changing profiles or making the repository
-   public alone is insufficient. Complete and verify that portability work before
-   presenting the fork-based walkthrough as ready for external users.
+   Use a target-service revision that includes the build-time repository identity
+   support introduced in upstream commit `c714bf1`. Its setup derives the identity
+   from GitHub `origin`, with `ORDER_BUILD_REPOSITORY` as a validated explicit
+   override. Earlier revisions hardcode the upstream identity. Verify
+   `/build-info.repository` against the fork; changing profiles or visibility
+   alone is insufficient. Full acceptance of a user-owned fork remains a separate
+   release gate.
 4. **Prepare configuration without exposing secrets.** From this directory run
    `./setup.sh help`, then `./setup.sh init-config`. Root `.env` holds shared
    non-secret settings; each of the three agents and five tools owns its own
@@ -72,9 +75,9 @@ this file gives coding assistants the execution order and safety boundaries.
    [PROFILE_SETUP_GUIDE.md](PROFILE_SETUP_GUIDE.md), including the worked fork
    example, canonical service-version lookup and dependency-ordered pin update.
    Review scope changes before updating hashes; a matching hash is not approval.
-   Deploy the operator's target through its
-   own `setup.sh`, verify `/build-info` against the selected repository/commit,
-   configure the service/source/publication profiles, and propagate their pins.
+   Deploy the operator's target through its own `setup.sh`, verify `/build-info`
+   against the selected repository and commit, configure the service, source and
+   publication profiles, and propagate their pins.
    Keep `collection.enabled=false`. Confirm sandbox isolation (or explicitly
    authorized development acceptance), draft-publication permission, and the
    Viewer `software-maintenance` memory domain. Do not assert isolation merely
@@ -120,16 +123,19 @@ Manual task submission is not proof of that automatic path.
    coordinator with identical profile bytes, and run `./setup.sh preflight`.
    Treat enabling collection as capable of starting paid work immediately.
 3. Generate ordinary requests through the target service, using the documented
-   `diagnostics/automatic-pilot` traffic helper and fresh order IDs. Supply its
-   order API token privately. Successful requests are sampled, so one order
-   may not produce a case. Observe admission before generating more traffic;
-   do not raise quotas or change the service to force a desired diagnosis.
-4. Monitor to a terminal case outcome. Inspect all relevant Registry Viewer
-   executions, prompts, skills, memory, logs and Jaeger traces. Verify the actual
-   candidate diff, baseline failure, candidate test results, independent review,
-   publication receipt, and draft PR in the operator's repository. If no repair
-   is justified or the run fails, report it accurately; do not call that a
-   successful PR-creation test. No automatic merge or repair deployment.
+   `diagnostics/automatic-pilot` traffic helper and fresh order IDs. Retrieve the
+   order API token privately using the README's Kubernetes Secret retrieval
+   example. Successful requests are sampled, so one order may not produce a case.
+   Observe admission before generating more traffic; do not raise quotas or
+   change the service to force a desired diagnosis.
+4. Monitor the case until it reaches a terminal outcome. Inspect all relevant
+   Registry Viewer executions, prompts, skills, memory, logs and Jaeger traces.
+   Use the README's read-only monitoring commands; keep observation, case, task
+   and execution IDs distinct. Verify the actual candidate diff, baseline failure,
+   candidate test results, independent review, publication receipt, and draft PR
+   in the operator's repository. If no repair is justified or the run fails,
+   report it accurately; do not call that a successful PR-creation test.
+   Do not merge or deploy the repair automatically.
 5. With separate run authorization, leave the draft open and repeat a matching
    workload. Verify fresh PR discovery and that no duplicate is created.
    A recalled memory claim alone does not establish current GitHub state.
