@@ -1,15 +1,15 @@
 # Maintenance coordinator — implementation reference
 
-Current as of the v0.6.0 acceptance run on 2026-10-13. This replaces the initial
-implementation plan; it is not a list of work still pending. Use the
+Updated on 2026-10-15 for validation feedback on linked results. This replaces
+the initial implementation plan; it is not a list of work still pending. Use the
 [solution README](../../README.md) and [profile guide](../../PROFILE_SETUP_GUIDE.md)
 for setup, limits and remaining release gates.
 
 ## Responsibilities
 
 The coordinator owns bounded observation collection, admission, application
-case records and assessment handoffs. Framework stores own task/execution
-lifecycle. The scheduler and collection worker read advisory observations
+case records and assessment handoffs. Framework stores manage task and execution
+lifecycles. The scheduler and collection worker read advisory observations
 without an LLM; admitted investigations enter the normal orchestration harness.
 
 - [agent.go](agent.go) constructs orchestration with runtime discovery and
@@ -34,16 +34,26 @@ receipt establishes `draft_pr_opened`; prose alone does not. Linked conclusions
 require their own evidence validation. The model does not choose trusted receipt
 identities or bypass publication policy.
 
+For linked results, the model sets `next_check.not_before` to a future time
+within `result_contract.maximum_next_check_delay_seconds` and at or before the
+selected assessment's `revalidate_after`. Validation occurs after evidence
+refresh. A selected time that has passed or exceeds either bound produces
+`LINKED_NEXT_CHECK_INVALID` feedback that includes the selected time and permitted
+window. Invalid values are reported and rejected; the server does not silently
+change the schedule. A recorded next check is guidance; it does not schedule
+automatic execution. Expired or inapplicable assessments are rejected separately
+from this timing error.
+
 Per-step failures and aggregate `execution_success` remain separate from
 domain-result acceptance. Valid artifacts are not erased by a later failed
-step; invalid synthesis or an orchestration error is not fabricated into success.
+step. Neither invalid synthesis nor an orchestration error is reported as success.
 Retained publication effects remain visible even if final validation fails.
 
 Only this agent builds shared memory, in domain `software-maintenance`.
 Historical memory is not current GitHub state or authority to suppress a case.
 
-Collection ships disabled. Finite admission controls and an operator run ID
-are required for the automatic test. The queued-task cancellation guard remains
+Collection is disabled by default. Finite admission controls and an operator run
+ID are required for the automatic test. The queued-task cancellation guard remains
 best-effort; exactly-once delivery and crash-safe recovery are not established.
 
 ## Verification and current limitations

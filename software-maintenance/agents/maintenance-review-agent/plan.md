@@ -1,6 +1,7 @@
 # Maintenance review agent — implementation reference
 
-Current as of the v0.6.0 acceptance run on 2026-10-13. See the
+Updated on 2026-10-15 for validation of review objectives. The release verification
+below describes the v0.6.0 acceptance run on 2026-10-13. See the
 [solution README](../../README.md) for setup and verification scope.
 
 ## Framework path and role
@@ -16,17 +17,25 @@ required. Evidence-investigation and outcome-assessment are selectable. The
 reviewer assesses one exact candidate, its contract and actual before/after
 verification. It has no candidate-editing or publication authority.
 
+The `objective` field accepts non-empty UTF-8 prose, including line breaks and
+tabs, within the profile's `maximum_objective_bytes` (8,192 in the shipped profile).
+Other control characters are rejected. Case, candidate and verification
+identifiers remain subject to their existing validation rules; accepting an
+objective does not grant an approval receipt. `INVALID_REVIEW_SCOPE` distinguishes
+invalid identifiers from objective failures and reports the objective's configured
+byte limit and received byte count.
+
 ## Approval boundary
 
 [receipt.go](receipt.go) accepts `approved`, `rejected` or `inconclusive`
-model decisions. Negative decisions need no approval receipt or mandatory
-evidence-call set.
+model decisions. Negative decisions require neither an approval receipt nor a
+mandatory set of evidence calls.
 
-Approval requires successful exact `get_service_profile` and
-`get_review_bundle` results for the requested scope. The code validates
-candidate/test/workspace/verification/job relationships, profiles, contract
-references and expiry. Unsupported approval returns an actionable error; the
-service does not manufacture a different model verdict.
+Approval requires successful `get_service_profile` and `get_review_bundle` results
+matching the requested scope. The code validates relationships among the
+candidate, test, workspace, verification and Job, as well as profiles, contract
+references and expiry. An approval unsupported by that evidence returns an
+actionable error; the service does not manufacture a different model verdict.
 
 The service creates an immutable case-scoped approval receipt only after these
 checks. Only the publication-tool identity can retrieve it through the internal
