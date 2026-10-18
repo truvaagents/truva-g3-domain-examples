@@ -51,8 +51,8 @@ try {
     '  grep -q "^TRUVAG3_PLAN_MAX_TOKENS=128000$" "$3"',
     '  grep -q "^MAINTENANCE_ASSESSMENT_RECORD_TIMEOUT=30s$" "$3"',
     '  if [[ "$1" == maintenance-agent-env-config ]]; then grep -q "^MAINTENANCE_INVESTIGATION_WORKERS=3$" "$3"; fi',
-    '  grep -q "^TRUVAG3_AI_RETRY_ATTEMPTS=1$" "$3"',
-    '  grep -q "^TRUVAG3_SKILL_RESOURCE_SELECTION_ATTEMPT_TIMEOUT=30s$" "$3"',
+    '  ! grep -q "^TRUVAG3_AI_RETRY_ATTEMPTS=" "$3"',
+    '  ! grep -q "^TRUVAG3_SKILL_RESOURCE_SELECTION_ATTEMPT_TIMEOUT=" "$3"',
     '}'
   ].join('\n');
   write(path.join(framework, 'examples/k8-deployment/setup-env-lib.sh'), helper);
@@ -82,12 +82,20 @@ try {
   for (const dir of dirs) {
     const p = path.join(example, dir, '.env');
     let text = fs.readFileSync(p, 'utf8').replace(/^([A-Z][A-Z0-9_]*TOKEN)=$/gm, (_, key) => key + '=' + identity(key));
-    text = text.replace('OPENROUTER_API_KEY=', 'OPENROUTER_API_KEY=fixture-not-a-real-key')
-      .replace('MAINTENANCE_NETWORK_ISOLATION_ATTESTED=false', 'MAINTENANCE_NETWORK_ISOLATION_ATTESTED=true')
-      .replace('MAINTENANCE_PUBLICATION_ENABLE_WRITES=false', 'MAINTENANCE_PUBLICATION_ENABLE_WRITES=true');
+    text = text.replace('OPENROUTER_API_KEY=', 'OPENROUTER_API_KEY=fixture-not-a-real-key');
     write(p, text);
   }
   ok(run(['validate'])); passed++;
+  const workspaceConfig = path.join(example, 'tools/maintenance-workspace-tool/.env');
+  const savedWorkspace = fs.readFileSync(workspaceConfig, 'utf8');
+  write(workspaceConfig, savedWorkspace.replace('MAINTENANCE_FUNCTIONAL_ACCEPTANCE_MODE=true', 'MAINTENANCE_FUNCTIONAL_ACCEPTANCE_MODE=false'));
+  fails(run(['validate']), /Ready workspace profile requires verified network isolation or explicit development acceptance mode/);
+  write(workspaceConfig, savedWorkspace); passed++;
+  const publicationConfig = path.join(example, 'tools/maintenance-publication-tool/.env');
+  const savedPublication = fs.readFileSync(publicationConfig, 'utf8');
+  write(publicationConfig, savedPublication.replace('MAINTENANCE_PUBLICATION_ENABLE_WRITES=true', 'MAINTENANCE_PUBLICATION_ENABLE_WRITES=false'));
+  fails(run(['validate']), /Ready publication profile requires explicit MAINTENANCE_PUBLICATION_ENABLE_WRITES=true/);
+  write(publicationConfig, savedPublication); passed++;
   const assessmentConfig = path.join(example, 'tools/maintenance-assessment-tool/.env');
   const savedAssessment = fs.readFileSync(assessmentConfig, 'utf8');
   write(assessmentConfig, savedAssessment + '\nMAINTENANCE_AGENT_MAXIMUM_SUMMARY_BYTES=12000\n');
@@ -138,7 +146,7 @@ try {
     write(coordinator, savedCoordinator + '\nMAINTENANCE_INVESTIGATION_WORKERS=' + value + '\n');
     fails(run(['validate']), /MAINTENANCE_INVESTIGATION_WORKERS/); passed++;
   }
-  write(coordinator, savedCoordinator.replace('MAINTENANCE_INVESTIGATION_WORKERS=1', 'MAINTENANCE_INVESTIGATION_WORKERS=3'));
+  write(coordinator, savedCoordinator + '\nMAINTENANCE_INVESTIGATION_WORKERS=3\n');
   ok(run(['validate'])); passed++;
   const configScript = 'source "$1/setup.sh" help >/dev/null; source "$2/examples/k8-deployment/setup-env-lib.sh"; load_env coordinator; configure_runtime coordinator';
   // Stub namespace creation only; exercise the real public ConfigMap projection.

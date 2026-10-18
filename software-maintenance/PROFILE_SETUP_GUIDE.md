@@ -189,10 +189,11 @@ files; they are **not complete replacement profiles**.
   caller/receiver peers. Agent AI keys belong in each agent's `.env`.
 - Keep `collection.enabled=false` in `retail-order-maintenance.json`.
 - Review [Readiness and safe profile changes](README.md#readiness-and-safe-profile-changes).
-  The shipped workspace/publication profiles are ready, while their environment
-  templates keep isolation acceptance and writes disabled. Filling tokens alone
-  will therefore not make `validate` pass. Configure the following gates only
-  after the corresponding operator decision:
+  The shipped workspace/publication profiles are ready. Their environment
+  templates match the local development setup: functional acceptance and draft
+  writes are enabled, while network isolation attestation is disabled. Review
+  the following gates before configuring credentials or deploying; retain an
+  enabled gate only after the corresponding operator decision:
 
 | Component environment file | Setting | Required decision |
 | --- | --- | --- |
