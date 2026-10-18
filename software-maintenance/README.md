@@ -290,16 +290,18 @@ New to profile pins? Start with [Understand the fingerprints](PROFILE_SETUP_GUID
 and the [worked fork example](PROFILE_SETUP_GUIDE.md#worked-example-your-own-fork).
 
 Collection is disabled in the shipped coordinator profile. Other profiles carry
-ready settings from verified development work. The component templates
-deliberately keep network attestation and publication writes off; filling secrets
-alone is not enough to run those ready profiles.
+ready settings from verified development work. The component templates match the
+local development setup: functional acceptance and draft publication writes are
+enabled, while network isolation attestation remains disabled. Review these
+settings and the repository destination before configuring credentials or
+deploying. Template values do not grant operator authorization.
 
 - Confirm the service URL, repository, contract commit, serving release and all
   prerequisite pins describe the deployment you own.
 - Set `MAINTENANCE_NETWORK_ISOLATION_ATTESTED=true` only after verifying actual
   isolation. `MAINTENANCE_FUNCTIONAL_ACCEPTANCE_MODE=true` is a development-only
   exception, not evidence of production security.
-- Set `MAINTENANCE_PUBLICATION_ENABLE_WRITES=true` only when explicitly allowing
+- Keep `MAINTENANCE_PUBLICATION_ENABLE_WRITES=true` only when explicitly allowing
   draft PR creation and after reviewing GitHub permissions.
 - Keep collection disabled and drain active cases before editing policy/pins.
 
@@ -555,7 +557,7 @@ settings from any particular diagnostic run.
 | `MAINTENANCE_ADMISSION_SUCCESS_QUOTA` | `1` | Maximum success-category admissions within that same rolling window. A successful HTTP request can still contain a functional defect. |
 | `MAINTENANCE_ADMISSION_RUN_DURATION` | `1h` | Deadline for new admissions, measured from creation of the run ledger. Not a task, phase, model-call or sandbox Job timeout. |
 | `MAINTENANCE_ADMISSION_WINDOW` | `5m` | Rolling interval for the total and category admission rates. Separate from the profile's observation read window. |
-| `MAINTENANCE_ADMISSION_COOLDOWN` | `1m` | Minimum spacing between new reservations across replicas. A short cooldown does not make the once-per-minute schedule run more often. |
+| `MAINTENANCE_ADMISSION_COOLDOWN` | `1s` | Minimum spacing between new reservations across replicas. A short cooldown does not make the once-per-minute schedule run more often. |
 
 All applicable limits must allow an admission. Category quotas do not add to or
 override `MAX_CASES` or `MAX_PER_WINDOW`. Re-observing an already admitted exact
@@ -1003,8 +1005,8 @@ deployment. Existing `.env` files are not overwritten when the template changes.
 | Step timeout setting / base executor HTTP allowance / server write | 14m / 18m / 21m; delegated HTTP calls can get 19m (see below), not a universal 14m call deadline |
 | Coordinator task / collection task | 20m / 2m |
 | AI provider-entry deadline | Coordinator 5m; repair/review 4m; retries share that entry's deadline, and the task/phase bounds the whole chain |
-| AI provider-local retry | 1 retry (at most 2 attempts on each eligible provider); ordered chain failover is separate |
-| Optional skill-resource selection | 30s per attempt, at most 2 attempts; bounded by parent cancellation/deadline |
+| AI provider-local retry | 0 retries by default for the agents' chain clients; optional TRUVAG3_AI_RETRY_ATTEMPTS override, with ordered chain failover separate |
+| Optional skill-resource selection | No separate attempt timeout by default; inherits the parent deadline, with at most 2 attempts |
 | Investigation concurrency | 1 worker per coordinator pod by default; MAINTENANCE_INVESTIGATION_WORKERS=1..100 |
 | Reasoning headroom | Explicit chain multiplier 1×; planning effort low, auxiliary default none |
 | Continuation results | 192 KiB total; individual projection remains separately bounded |
@@ -1046,7 +1048,7 @@ to 60m, phase/base executor HTTP allowance to 40m, step setting to 35m, and serv
 write/repair-review ingress read allowance to 42m. The 35m step setting plus the
 framework's 5m HITL allowance yields up to 40m for delegated HTTP calls; parent
 deadlines can end them sooner. These limits provide room, not a guaranteed
-finalization reserve. The overlay also keeps one provider retry and the 30s
+finalization reserve. The overlay also sets one provider retry and a 30s
 resource-selection attempt deadline. It remains opt-in:
 
 ```bash
@@ -1058,9 +1060,11 @@ MAINTENANCE_DIAGNOSTIC_PROFILE=expanded-budget ./setup.sh rollout review
 Drain active work and obtain a paid-run allowance before enabling collection.
 The profile is selected by the invoking shell, not persisted by editing `.env`.
 Its increase-only guard still rejects a higher conflicting operator budget.
-Existing `.env` files are preserved: copy the new retry/selector controls into
-them explicitly when desired, then roll out all three agents. Neither updating
-templates nor running offline validation changes the live settings.
+Existing `.env` files are preserved. The base template leaves retry and
+resource-selection timeout overrides commented out to match the local setup;
+set these variables in the root `.env` only when desired. Apply environment
+changes through setup and roll out all three agents. Neither updating templates
+nor running offline validation changes the live settings.
 
 Final summaries retain the existing outer-whitespace trimming, then accept valid
 UTF-8 prose with internal line breaks and tabs within the configured byte cap.
@@ -1108,7 +1112,7 @@ template into their own configuration and keep pod grace longer than drains.
 | Infrastructure ownership | Implemented: setup operates maintenance workloads only and refuses shared infrastructure creation. |
 | Credential ownership | Implemented: component `.env.example` files, explicit backed-up migration, per-component validation and caller/receiver comparisons. |
 | All-components entry point | Implemented: `deploy-all` and `test-all`; checks stop on failure. |
-| Offline setup verification | Passed: 45 checks via `node setup.test.mjs` (Node.js required for these development checks only), using synthetic credentials and recording helpers; no real cluster or AI requests. |
+| Offline setup verification | Passed: 47 checks via `node setup.test.mjs` (Node.js required for these development checks only), using synthetic credentials and recording helpers; no real cluster or AI requests. |
 | Workspace image builds | Passed: all eight images built through `setup.sh image`, using the merged framework snapshot. Docker verified; Podman not live-tested in this packaging pass. |
 | Published release | Passed: v0.6.1 pins, module verification, all eight binary/image builds, vet and existing race tests. Running binaries were inspected and link published v0.6.1 modules without replacements. |
 | Target-service safety and public release | Pending: maintainers review the service for safe public consumption, then explicitly authorize its public release. Changing repository visibility is not a setup step. |

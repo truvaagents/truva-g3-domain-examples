@@ -59,10 +59,10 @@ deadline. This does not provide automatic durable waiting.
 
 ## Readiness and verification
 
-The supplied profile has `publication_ready: true`, but the environment template
-keeps `MAINTENANCE_PUBLICATION_ENABLE_WRITES=false`. Credentials and explicit
-operator authorization are still required. Ready profile bytes alone grant no
-write permission.
+The supplied profile has `publication_ready: true`, and the environment template
+sets `MAINTENANCE_PUBLICATION_ENABLE_WRITES=true` to match the local development
+setup. Credentials and explicit operator authorization are still required;
+template settings alone grant no write permission.
 
 The v0.6.0 run inspected existing work and created draft PR #16 for the correct
 WELCOME100 repair after baseline/candidate verification and independent review.
