@@ -80,22 +80,22 @@ func (tool *maintenanceSourceTool) registerCapabilities() {
 		Name: "list_source_tree", Description: "Lists one bounded sorted page of the authorized repository tree at an exact commit. Denied credential and policy paths are excluded and coverage is explicit.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleListSourceTree,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{repositoryField, revisionField}, OptionalFields: []core.FieldHint{
-			{Name: "path_prefix", Type: "string", Example: "internal/order"}, {Name: "after", Type: "string", Description: "Last path from the previous page"}, {Name: "limit", Type: "number", Description: "Omit to use the repository default; otherwise 1 through limits.maximum_tree_results returned by resolve_source_revision"},
+			{Name: "path_prefix", Type: "string", Example: "internal/order"}, {Name: "after", Type: "string", Description: "Copy next_after from the previous list_source_tree page; omit for the first page"}, {Name: "limit", Type: "number", Description: "Omit to use the repository default; otherwise 1 through limits.maximum_tree_results returned by resolve_source_revision"},
 		}},
-		OutputSummary: sourceOutputSummary("tree_sha", "entries", "returned_count", "truncated", "coverage", "collected_at"),
+		OutputSummary: sourceTreeOutputSummary(),
 	})
 	tool.RegisterCapability(core.Capability{
 		Name: "read_source_file", Description: "Reads one bounded UTF-8 source slice from an allowed path at an exact commit and returns full-file content identity. Binary and denied files are rejected.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleReadSourceFile,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{repositoryField, revisionField, {Name: "path", Type: "string", Example: "service.go"}}, OptionalFields: []core.FieldHint{
-			{Name: "byte_start", Type: "number", Example: "0"}, {Name: "byte_limit", Type: "number", Description: "Omit to use the repository default; otherwise 1 through limits.maximum_read_bytes returned by resolve_source_revision"},
+			{Name: "byte_start", Type: "number", Example: "0", Description: "Nonnegative integer byte offset; defaults to 0. Continue from the previous byte_end"}, {Name: "byte_limit", Type: "number", Description: "Omit to use the repository default; otherwise 1 through limits.maximum_read_bytes returned by resolve_source_revision"},
 		}},
 		OutputSummary: sourceOutputSummary("tree_sha", "path", "blob_sha", "content_sha256", "byte_start", "byte_end", "total_bytes", "content", "truncated", "collected_at"),
 	})
 	tool.RegisterCapability(core.Capability{
 		Name: "search_source", Description: "Performs bounded literal search across likely text files at an exact commit. It reports files/bytes scanned and whether coverage was complete.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleSearchSource,
-		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{repositoryField, revisionField, {Name: "query", Type: "string", Example: "order_id"}}, OptionalFields: []core.FieldHint{
+		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{repositoryField, revisionField, {Name: "query", Type: "string", Example: "order_id", Description: "Literal search text, 2 through 128 UTF-8 bytes; no regular expressions"}}, OptionalFields: []core.FieldHint{
 			{Name: "path_prefix", Type: "string"}, {Name: "case_sensitive", Type: "boolean", Example: "false"}, {Name: "limit", Type: "number", Description: "Omit to use the repository default; otherwise 1 through limits.maximum_search_results returned by resolve_source_revision"},
 		}},
 		OutputSummary: sourceOutputSummary("tree_sha", "matches", "returned_count", "truncated", "coverage", "collected_at"),
@@ -122,6 +122,15 @@ func (tool *maintenanceSourceTool) registerCapabilities() {
 			{Name: "content_base64", Type: "string"}, {Name: "truncated", Type: "boolean"},
 		}},
 	})
+}
+
+func sourceTreeOutputSummary() *core.SchemaSummary {
+	summary := sourceOutputSummary("tree_sha", "entries", "returned_count", "truncated", "coverage", "collected_at")
+	summary.OptionalFields = []core.FieldHint{
+		{Name: "path_prefix", Type: "string", Description: "Requested subtree prefix, when supplied"},
+		{Name: "next_after", Type: "string", Description: "Copy to after for the next page; absent when this tree has no further local page. Check coverage separately for upstream truncation"},
+	}
+	return summary
 }
 
 func sourceOutputSummary(fields ...string) *core.SchemaSummary {

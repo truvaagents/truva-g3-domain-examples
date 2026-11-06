@@ -101,11 +101,12 @@ func (tool *maintenancePublicationTool) registerCapabilities() {
 		OutputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{{Name: "publication_id", Type: "string"}, {Name: "case_id", Type: "string"}, {Name: "disposition", Type: "string", Description: "abandoned_before_write, abandoned_before_pr, observed_open_pr, observed_closed_pr, or not_pending. not_pending establishes no publication outcome."}, {Name: "observed_at", Type: "string"}}, OptionalFields: []core.FieldHint{{Name: "pull_request_number", Type: "number"}, {Name: "pull_request_url", Type: "string"}}},
 	})
 	tool.RegisterCapability(core.Capability{
-		Name: "list_open_remediations", Description: "Discovers open PRs, including drafts and manually created work, for the authorized repository/base. Use to assess existing work before deciding whether new publication is warranted. Complete coverage includes repository_view_id: pass that exact value to publish_draft_pr; changed PR state requires fresh assessment. Returns PR numbers, titles, base/head identities, completeness and limitations. Required: profile_id.",
+		Name: "list_open_remediations", Description: "Discovers open PRs, including drafts and manually created work, for the authorized repository/base. Use to assess existing work before deciding whether new publication is warranted. Complete coverage includes repository_view_id: pass that exact value to publish_draft_pr; changed PR state requires fresh assessment. Returns PR numbers, titles, base/head identities, completeness, limitations and publication_limits for drafting a bounded title and body. Required: profile_id.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: func(w http.ResponseWriter, r *http.Request) { tool.handleRemediationRead(w, r, false) },
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{{Name: "profile_id", Type: "string", Description: "Authorized publication profile selecting repository and base branch."}}},
 		OutputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "profile_id", Type: "string"}, {Name: "repository_id", Type: "string"}, {Name: "base_ref", Type: "string"},
+			{Name: "publication_limits", Type: "object", Description: "maximum_title_bytes and maximum_body_bytes for publish_draft_pr, measured in UTF-8 bytes after trimming whitespace"},
 			{Name: "pull_requests", Type: "array", Description: "Entries include pull_request_number, pull_request_url, title, base_sha, head_sha and optional draft."},
 			{Name: "complete", Type: "boolean"}, {Name: "observed_at", Type: "string"}, {Name: "limitations", Type: "array"},
 		}, OptionalFields: []core.FieldHint{{Name: "repository_view_id", Type: "string", Description: "Present for complete coverage. Repository-state precondition for publication; it certifies observed state, not issue applicability."}}},
@@ -143,7 +144,7 @@ func (tool *maintenancePublicationTool) registerCapabilities() {
 			{Name: "profile_id", Type: "string", Example: "retail-order-publication"}, {Name: "case_id", Type: "string"},
 			{Name: "repository_view_id", Type: "string", Description: "Exact repository_view_id from complete open-PR discovery assessed for this decision. Preserve case/artifact identities when reconsidering changed state."},
 			{Name: "candidate_id", Type: "string"}, {Name: "verification_id", Type: "string"}, {Name: "review_id", Type: "string"},
-			{Name: "title", Type: "string"}, {Name: "body", Type: "string"},
+			{Name: "title", Type: "string", Description: "Nonempty UTF-8 title after trimming; no line breaks. Stay within list_open_remediations.publication_limits.maximum_title_bytes. Tabs are allowed; other control characters are invalid"}, {Name: "body", Type: "string", Description: "Nonempty UTF-8 explanation after trimming; line breaks and tabs are allowed, other control characters are invalid. Stay within list_open_remediations.publication_limits.maximum_body_bytes"},
 		}},
 		OutputSummary: publicationOutputSummary(),
 	})
@@ -157,6 +158,10 @@ func publicationOutputSummary() *core.SchemaSummary {
 		{Name: "base_sha", Type: "string"}, {Name: "base_tree_sha", Type: "string"}, {Name: "branch", Type: "string"},
 		{Name: "draft", Type: "boolean"}, {Name: "status", Type: "string"}, {Name: "created_at", Type: "string"},
 		{Name: "updated_at", Type: "string"}, {Name: "expires_at", Type: "string"}, {Name: "limitations", Type: "array"},
+		{Name: "schema_version", Type: "number"}, {Name: "profile_sha256", Type: "string"},
+		{Name: "workspace_profile_id", Type: "string"}, {Name: "workspace_profile_sha256", Type: "string"},
+		{Name: "source_profile_sha256", Type: "string"}, {Name: "review_profile_sha256", Type: "string"},
+		{Name: "snapshot_id", Type: "string"}, {Name: "test_artifact_id", Type: "string"},
 	}, OptionalFields: []core.FieldHint{
 		{Name: "repository_view_id", Type: "string", Description: "Repository view accepted before this publication's Git writes; absent from older receipts."},
 		{Name: "candidate_tree_sha", Type: "string"}, {Name: "commit_sha", Type: "string"},

@@ -6,11 +6,11 @@
   "repository_id": "retail-order-service",
   "expected_service_profile_version": "sha256:88f46ed6d47023ce1aa8904e2f57bfd61669f6c2d2864880a06837320fd8cf4c",
   "repair_profile_id": "retail-order-repair",
-  "expected_repair_profile_sha256": "fac52cb249352e49e2aa89474fe4ec96e9cece7c187ffd6e30aa3441ee2ba09c",
+  "expected_repair_profile_sha256": "d5e1f87314cb30ee0967b1ba749dedaee61d9be3995693e7c0f8f9029457d747",
   "review_profile_id": "retail-order-review",
-  "expected_review_profile_sha256": "7664d906e4de4ac67511d7134b48e3f037036ced1501122996b332f1985dc736",
+  "expected_review_profile_sha256": "b930959327dd6cb357f1fe1d96359c1ebdd291dfb41500806f9e5c904c851d42",
   "publication_profile_id": "retail-order-publication",
-  "expected_publication_profile_sha256": "d997506a55fe2fd66f1d3c78ac37041572051ef3b2fa7aeacff868e5242795ee",
+  "expected_publication_profile_sha256": "844ad1e02e2fcf069e3b17af33644d7a6639e5b953415a2f357a6271c01ceebc",
   "allowed_callers": [
     "maintenance-operator"
   ],

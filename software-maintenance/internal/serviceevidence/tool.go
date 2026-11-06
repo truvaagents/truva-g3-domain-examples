@@ -93,10 +93,10 @@ func (t *maintenanceEvidenceTool) registerCapabilities() {
 		InputSummary: &core.SchemaSummary{
 			RequiredFields: []core.FieldHint{
 				profileField,
-				{Name: "start", Type: "string", Example: "2026-09-17T15:00:00Z", Description: "Inclusive RFC3339 window start"},
-				{Name: "end", Type: "string", Example: "2026-09-17T15:05:00Z", Description: "RFC3339 window end"},
+				{Name: "start", Type: "string", Example: "2026-09-17T15:00:00Z", Description: "Inclusive RFC3339 start before end and within get_service_profile.observation_constraints.retention_seconds of now; window length must fit maximum_window_seconds"},
+				{Name: "end", Type: "string", Example: "2026-09-17T15:05:00Z", Description: "RFC3339 end after start and no later than now; use get_service_profile.observation_constraints.maximum_window_seconds"},
 			},
-			OptionalFields: []core.FieldHint{{Name: "limit", Type: "number", Example: "50", Description: "Maximum candidates, from 1 through the profile maximum"}},
+			OptionalFields: []core.FieldHint{{Name: "limit", Type: "number", Example: "50", Description: "Integer from 1 through get_service_profile.observation_constraints.maximum_items; omitted or zero uses that maximum"}},
 		},
 		OutputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "profile_id", Type: "string"}, {Name: "profile_version", Type: "string"},

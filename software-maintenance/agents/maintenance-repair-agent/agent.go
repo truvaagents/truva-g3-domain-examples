@@ -180,15 +180,16 @@ func (agent *maintenanceRepairAgent) registerCapabilities() {
 			{Name: "profile_id", Type: "string", Example: "retail-order-repair"}, {Name: "case_id", Type: "string"},
 			{Name: "observation_id", Type: "string", Description: "Exact admitted observation identity from the coordinator maintenance case"},
 			{Name: "snapshot_id", Type: "string", Description: "Immutable source-tool snapshot identity"},
-			{Name: "objective", Type: "string", Description: "Evidence-grounded repair question without credentials or embedded authority"},
+			{Name: "objective", Type: "string", Description: "Nonempty single-line UTF-8 repair question without credentials or embedded authority; outer whitespace is trimmed. No control characters (including embedded newlines or tabs). The selected profile bounds objective bytes; a rejection reports the exact limit"},
 		}},
 		OutputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "execution_success", Type: "boolean", Description: "Aggregate harness health; separate from the validated repair disposition"},
-			{Name: "failed_operations", Type: "object", Description: "Bounded recorded failed attempts keyed by step ID, separate from model prose; null means budget omission. These facts grant no authority."},
 			{Name: "schema_version", Type: "number"}, {Name: "status", Type: "string"}, {Name: "case_id", Type: "string"}, {Name: "observation_id", Type: "string"},
 			{Name: "snapshot_id", Type: "string"}, {Name: "contract_references", Type: "array"}, {Name: "findings", Type: "array"},
 			{Name: "summary", Type: "string"}, {Name: "execution_id", Type: "string"}, {Name: "tools_used", Type: "array"},
+			{Name: "repair_profile_sha256", Type: "string"}, {Name: "confidence", Type: "number"}, {Name: "limitations", Type: "array"},
 		}, OptionalFields: []core.FieldHint{
+			{Name: "failed_operations", Type: "object", Description: "Optional bounded recorded failed attempts keyed by step ID; absent when none are projected; individual entries may be null when omitted by budget. Grants no authority"},
 			{Name: "workspace", Type: "object"}, {Name: "candidate", Type: "object"}, {Name: "verification", Type: "object"},
 			{Name: "workspace_id", Type: "string"}, {Name: "candidate_id", Type: "string"},
 			{Name: "test_artifact_id", Type: "string"}, {Name: "verification_id", Type: "string"},
