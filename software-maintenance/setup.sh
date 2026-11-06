@@ -498,6 +498,13 @@ check_evidence_access() {
         jq -e '.success == true and .data.profile_id == "retail-order-service"' >/dev/null
 }
 
+readiness_get() {
+    # Ingress may briefly return 502 after a rollout. Retry only curl's
+    # transient GET failures, with at most six attempts and bounded timeouts.
+    curl -fsS --retry 5 --retry-delay 1 --retry-max-time 30 \
+        --retry-connrefused --connect-timeout 2 --max-time 5 "$1"
+}
+
 test_component() {
     local component="$1"
     load_env "$component"
@@ -506,7 +513,7 @@ test_component() {
         assessment)
             local assessment_base="http://maintenance-assessment-tool.localhost"
             info "Checking assessment-tool health, discovery, and authorized history read"
-            curl -fsS "$assessment_base/health" >/dev/null
+            readiness_get "$assessment_base/health" >/dev/null
             curl -fsS "$assessment_base/api/capabilities" >/dev/null
             curl -fsS -X POST -H "Authorization: Bearer $MAINTENANCE_AGENT_SERVICE_TOKEN" \
                 -H "Content-Type: application/json" -d '{"profile_id":"retail-order-maintenance"}' \
@@ -516,7 +523,7 @@ test_component() {
         evidence)
             local evidence_base="http://maintenance-evidence-tool.localhost"
             info "Checking evidence-tool health and discovery contract"
-            curl -fsS "$evidence_base/health" >/dev/null
+            readiness_get "$evidence_base/health" >/dev/null
             curl -fsS "$evidence_base/api/capabilities" >/dev/null
             curl -fsS -X POST \
                 -H "Authorization: Bearer $MAINTENANCE_EVIDENCE_COORDINATOR_TOKEN" \
@@ -528,7 +535,7 @@ test_component() {
         source)
             local source_base="http://maintenance-source-tool.localhost"
             info "Checking source-tool health, discovery, and exact revision resolution"
-            curl -fsS "$source_base/health" >/dev/null
+            readiness_get "$source_base/health" >/dev/null
             curl -fsS "$source_base/api/capabilities" >/dev/null
             curl -fsS -X POST \
                 -H "Authorization: Bearer $MAINTENANCE_SOURCE_COORDINATOR_TOKEN" \
@@ -540,33 +547,33 @@ test_component() {
         workspace)
             local workspace_base="http://maintenance-workspace-tool.localhost"
             info "Checking workspace-tool health and discovery contract"
-            curl -fsS "$workspace_base/health" >/dev/null
+            readiness_get "$workspace_base/health" >/dev/null
             curl -fsS "$workspace_base/api/capabilities" >/dev/null
             ;;
         publication)
             local publication_base="http://maintenance-publication-tool.localhost"
             info "Checking publication-tool health and discovery contract"
-            curl -fsS "$publication_base/health" >/dev/null
+            readiness_get "$publication_base/health" >/dev/null
             curl -fsS "$publication_base/api/capabilities" >/dev/null
             ;;
         repair)
             local repair_base="http://maintenance-repair-agent.localhost"
             info "Checking repair-agent readiness and discovery contract"
-            curl -fsS "$repair_base/repair/health" >/dev/null
+            readiness_get "$repair_base/repair/health" >/dev/null
             curl -fsS "$repair_base/api/capabilities" >/dev/null
             check_evidence_access "$MAINTENANCE_REPAIR_SERVICE_TOKEN"
             ;;
         review)
             local review_base="http://maintenance-review-agent.localhost"
             info "Checking review-agent readiness and discovery contract"
-            curl -fsS "$review_base/review/health" >/dev/null
+            readiness_get "$review_base/review/health" >/dev/null
             curl -fsS "$review_base/api/capabilities" >/dev/null
             check_evidence_access "$MAINTENANCE_REVIEW_SERVICE_TOKEN"
             ;;
         coordinator)
             local coordinator_base="http://maintenance-agent.localhost"
             info "Checking coordinator readiness and discovery contract"
-            curl -fsS "$coordinator_base/maintenance/health" >/dev/null
+            readiness_get "$coordinator_base/maintenance/health" >/dev/null
             curl -fsS "$coordinator_base/api/capabilities" >/dev/null
             check_evidence_access "$MAINTENANCE_AGENT_SERVICE_TOKEN"
             ;;
@@ -623,6 +630,12 @@ cleanup_component() {
     app="$(component_app "$component")"
     manifest="$(component_manifest "$component")"
     maintenance_require_cluster
+    if [[ "$component" == workspace ]]; then
+        # Sandbox Jobs outlive the tool Deployment and keep its PVC mounted.
+        # Foreground deletion waits for their pods before the PVC is removed.
+        kubectl delete jobs -n "$NAMESPACE" -l "app=$app,maintenance-sandbox=true" \
+            --cascade=foreground --wait=true --timeout=120s --ignore-not-found
+    fi
     kubectl delete -f "$manifest" --ignore-not-found
     kubectl delete configmap "$app-env-config" -n "$NAMESPACE" --ignore-not-found
     kubectl delete secret "$app-secrets" -n "$NAMESPACE" --ignore-not-found

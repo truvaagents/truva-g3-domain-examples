@@ -246,7 +246,10 @@ maintenance_remove_temp() {
     esac
 }
 
-maintenance_prepare_build_context() {
+maintenance_prepare_build_context() (
+    # Public build inputs must remain readable by non-root image users even
+    # when the caller uses a private umask. Keep this change inside the subshell.
+    umask 022
     local mode="$1" component="$2" destination="$3" source_dir
     source_dir="$(component_source_path "$component")"
     if [[ "$mode" == workspace ]]; then
@@ -265,7 +268,7 @@ maintenance_prepare_build_context() {
         -cf - go.mod go.sum internal profiles "$source_dir" |
         tar -C "$destination" -xf -
     cp "$SCRIPT_DIR/.dockerignore" "${3}/.dockerignore"
-}
+)
 
 maintenance_create_configmap() (
     local name="$1" namespace="$2" ignored_file="$3"
