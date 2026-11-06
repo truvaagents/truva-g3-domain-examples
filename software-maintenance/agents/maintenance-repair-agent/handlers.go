@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -43,9 +44,13 @@ func (agent *maintenanceRepairAgent) handleRepair(writer http.ResponseWriter, re
 		return
 	}
 	input.Objective = strings.TrimSpace(input.Objective)
-	if !caseIDPattern.MatchString(input.CaseID) || !observationIDPattern.MatchString(input.ObservationID) || !snapshotIDPattern.MatchString(input.SnapshotID) || input.Objective == "" ||
-		len(input.Objective) > profile.Limits.MaximumObjectiveBytes || !validRepairText(input.Objective) {
-		agent.fail(writer, request, capability, started, http.StatusBadRequest, "INVALID_REPAIR_SCOPE", "Repair identifiers or objective are invalid", core.CategoryInputError, false)
+	if !caseIDPattern.MatchString(input.CaseID) || !observationIDPattern.MatchString(input.ObservationID) || !snapshotIDPattern.MatchString(input.SnapshotID) {
+		agent.fail(writer, request, capability, started, http.StatusBadRequest, "INVALID_REPAIR_SCOPE", "Use the exact case_id, observation_id and snapshot_id returned by their owning capabilities", core.CategoryInputError, false)
+		return
+	}
+	if input.Objective == "" || len(input.Objective) > profile.Limits.MaximumObjectiveBytes || !validRepairText(input.Objective) {
+		agent.fail(writer, request, capability, started, http.StatusBadRequest, "INVALID_REPAIR_SCOPE",
+			fmt.Sprintf("objective must be non-empty single-line UTF-8 text within %d bytes after trimming whitespace (received %d bytes); embedded newlines, tabs and other control characters are invalid", profile.Limits.MaximumObjectiveBytes, len(input.Objective)), core.CategoryInputError, false)
 		return
 	}
 	orch := agent.GetOrchestrator()

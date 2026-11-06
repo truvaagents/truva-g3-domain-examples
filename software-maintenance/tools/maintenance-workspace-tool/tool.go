@@ -102,15 +102,15 @@ func newMaintenanceWorkspaceToolFromEnvironment() (*maintenanceWorkspaceTool, er
 
 func (tool *maintenanceWorkspaceTool) registerCapabilities() {
 	tool.RegisterCapability(core.Capability{
-		Name: "create_workspace", Description: "Creates an isolated immutable workspace from a source-tool snapshot handle and binds it to one maintenance case and runner profile.",
+		Name: "create_workspace", Description: "Creates an isolated immutable workspace from a source-tool snapshot handle and binds it to one maintenance case and runner profile. Returns allowed_command_ids for run_experiment and numeric limits for staging and artifact reads.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleCreateWorkspace,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "profile_id", Type: "string", Description: "Use the workspace runner profile supplied in the repair request's workspace_profile_id as profile_id.", Example: "retail-order-go"}, {Name: "case_id", Type: "string"}, {Name: "snapshot_id", Type: "string"},
 		}},
-		OutputSummary: workspaceOutputSummary("workspace_id", "profile_id", "profile_sha256", "source_profile_sha256", "case_id", "repository_id", "snapshot_id", "revision_sha", "tree_sha", "archive_sha256", "verification_ready", "created_at", "expires_at", "limitations"),
+		OutputSummary: workspaceOutputSummary("workspace_id", "profile_id", "profile_sha256", "source_profile_sha256", "case_id", "repository_id", "snapshot_id", "revision_sha", "tree_sha", "archive_sha256", "verification_ready", "created_at", "expires_at", "limitations", "allowed_command_ids", "limits"),
 	})
 	tool.RegisterCapability(core.Capability{
-		Name: "stage_candidate", Description: `Stages bounded source changes and regression tests after exact base-identity checks. Existing paths require their exact SHA-256. New paths require base_sha256 to be the literal string "absent", not an empty-content digest. Returns immutable candidate and test artifact identities without executing code.`,
+		Name: "stage_candidate", Description: `Stages bounded source changes and regression tests within create_workspace.limits.maximum_candidate_files, maximum_candidate_bytes and maximum_file_bytes after exact base-identity checks. Existing paths require their exact SHA-256. New paths require base_sha256 to be the literal string "absent", not an empty-content digest. Returns immutable candidate and test artifact identities without executing code.`,
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleStageCandidate,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "workspace_id", Type: "string", Example: "ws_<64 lowercase hex>", Description: "Exact workspace_id returned by create_workspace; never a repository, profile, snapshot, or revision identifier"}, {Name: "case_id", Type: "string"}, {Name: "expected_test", Type: "string", Example: "TestOrderTotal", Description: "Exact Go test function name only (Test...); do not include a sentence, command, package, or explanation"},
@@ -123,9 +123,9 @@ func (tool *maintenanceWorkspaceTool) registerCapabilities() {
 		Name: "run_experiment", Description: "Submits one profile-approved command against an immutable baseline, reproduction, or candidate tree. Returns a Job handle, not a success claim.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleRunExperiment,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
-			{Name: "workspace_id", Type: "string"}, {Name: "case_id", Type: "string"}, {Name: "target", Type: "string", Example: "candidate"},
-			{Name: "command_id", Type: "string", Example: "go-test-all"}, {Name: "idempotency_key", Type: "string"},
-		}, OptionalFields: []core.FieldHint{{Name: "candidate_id", Type: "string", Description: "Required for reproduction or candidate targets"}}},
+			{Name: "workspace_id", Type: "string"}, {Name: "case_id", Type: "string"}, {Name: "target", Type: "string", Example: "candidate", Description: "baseline, reproduction, or candidate. baseline forbids candidate_id; reproduction and candidate require it"},
+			{Name: "command_id", Type: "string", Example: "go-test-all", Description: "Copy one exact string from create_workspace.allowed_command_ids; commands and arguments are selected by the owner profile"}, {Name: "idempotency_key", Type: "string", Description: "1-128 ASCII characters: start with a letter or digit, then letters, digits, dot, underscore, colon or hyphen. Reuse with the same workspace, candidate, target and command to observe the same Job"},
+		}, OptionalFields: []core.FieldHint{{Name: "candidate_id", Type: "string", Description: "Exact stage_candidate.candidate_id; required for reproduction or candidate targets and forbidden for baseline"}}},
 		OutputSummary: jobOutputSummary(),
 	})
 	tool.RegisterCapability(core.Capability{
@@ -149,7 +149,7 @@ func (tool *maintenanceWorkspaceTool) registerCapabilities() {
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleReadJobArtifact,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "artifact_id", Type: "string"}, {Name: "case_id", Type: "string"},
-		}, OptionalFields: []core.FieldHint{{Name: "byte_start", Type: "number"}, {Name: "byte_limit", Type: "number"}, {Name: "format", Type: "string", Description: "text or base64; absent preserves base64"}}},
+		}, OptionalFields: []core.FieldHint{{Name: "byte_start", Type: "number", Description: "Nonnegative integer byte offset, default 0; continue from byte_end"}, {Name: "byte_limit", Type: "number", Description: "Positive integer up to create_workspace.limits.maximum_artifact_read_bytes; omitted or zero uses that maximum"}, {Name: "format", Type: "string", Description: "text or base64; absent preserves base64"}}},
 		OutputSummary: artifactOutputSummary(),
 	})
 	tool.RegisterCapability(core.Capability{
@@ -185,9 +185,9 @@ func workspaceOutputSummary(fields ...string) *core.SchemaSummary {
 		fieldType := "string"
 		description := ""
 		switch field {
-		case "limitations", "candidate_job_ids", "candidate_file_previews", "jobs":
+		case "limitations", "candidate_job_ids", "candidate_file_previews", "jobs", "allowed_command_ids":
 			fieldType = "array"
-		case "workspace", "candidate", "verification":
+		case "workspace", "candidate", "verification", "limits":
 			fieldType = "object"
 		case "verification_ready", "expected_test_observed", "suite_passed", "publication_eligible", "timed_out", "truncated", "artifact_truncated":
 			fieldType = "boolean"
