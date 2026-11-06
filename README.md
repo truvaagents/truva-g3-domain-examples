@@ -34,7 +34,7 @@ its own `setup.sh`.
 | Example | Scenario | Entry point |
 |---|---|---|
 | [Agentic Commerce Control Tower](agentic-commerce/) | Evidence-grounded order recovery with deterministic enforcement, HITL, and a domain-neutral knowledge gateway | `cd agentic-commerce && ./setup.sh deploy` |
-| [Autonomous Software Maintenance](software-maintenance/) | Scheduled observation, source-backed investigation, isolated candidate testing, independent review and draft-only PR publication; published v0.6.0 verified in existing Kind infrastructure; public/fork setup gates remain | `cd software-maintenance && ./setup.sh help`; follow its README before `./setup.sh deploy-all` |
+| [Autonomous Software Maintenance](software-maintenance/) | Scheduled observation, source-backed investigation, isolated candidate testing, independent review and draft-only PR publication; published v0.6.2 builds, deployment and traffic-driven draft publication verified in existing Kind infrastructure; a framework recovery failure and public/fork setup gates remain | `cd software-maintenance && ./setup.sh help`; follow its README before `./setup.sh deploy-all` |
 
 The original proposal and supporting knowledge-foundry research are preserved
 under [solution-blueprints](solution-blueprints/).

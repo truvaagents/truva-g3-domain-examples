@@ -21,10 +21,10 @@ README for the current setup and operational requirements.
 
 ## Setup
 
-> **Framework version:** this example pins the published TruvaG3 **v0.6.1**
-> modules and requires **Go 1.27.2 or newer**. Release builds are the default;
+> **Framework version:** this example pins the published TruvaG3 **v0.6.2**
+> modules and requires **Go 1.27.3 or newer**. Release builds are the default;
 > no local framework replacements are needed. A framework checkout is still
-> required for shared setup helpers and infrastructure; use v0.6.1 or a reviewed
+> required for shared setup helpers and infrastructure; use v0.6.2 or a reviewed
 > compatible newer checkout. Fresh-install live acceptance remains a separate
 > gate; see Public-release readiness below.
 
@@ -52,7 +52,7 @@ alone is not the complete solution.
 
 ### Prerequisites
 
-- Go 1.27.2+, Bash, Git, jq, curl, OpenSSL, shasum, kubectl, Kind, and Docker or Podman.
+- Go 1.27.3+, Bash, Git, jq, curl, OpenSSL, shasum, kubectl, Kind, and Docker or Podman.
 - The domain-examples and framework checkouts as siblings, or an explicit
   `TRUVAG3_ROOT` pointing at the framework checkout. The framework owns shared
   infrastructure; this directory owns only maintenance workloads.
@@ -84,7 +84,7 @@ From your chosen workspace parent directory, clone both repositories as siblings
 (skip the clone command for a checkout you already have; preserve local work):
 
 ```bash
-git clone --branch v0.6.1 https://github.com/truvaagents/truva-g3.git
+git clone --branch v0.6.2 https://github.com/truvaagents/truva-g3.git
 git clone https://github.com/truvaagents/truva-g3-domain-examples.git
 cd truva-g3/examples/travel-chat-agent
 ./setup.sh help
@@ -1083,8 +1083,11 @@ IDs and authoritative receipt checks retain their separate strict contracts.
 
 Cleanup is scoped but not necessarily reversible: **workspace cleanup deletes
 its PVC manifest**, which can remove candidate/job files depending on storage
-reclaim policy. Back up evidence first. Neither cleanup nor this guide authorizes
-closing PRs, deleting branches or clearing Redis.
+reclaim policy. Back up evidence first. Workspace cleanup first deletes its own
+sandbox Jobs using both ownership labels and waits for their Pods through
+foreground deletion. If that bounded deletion fails, cleanup stops before the
+manifest/PVC deletion. Neither cleanup nor this guide authorizes closing PRs,
+deleting branches or clearing Redis.
 
 Shutdown now calls the framework's component stop method and joins HTTP draining
 before closing owned clients and flushing telemetry. Agents initialize the
@@ -1094,7 +1097,7 @@ template into their own configuration and keep pod grace longer than drains.
 
 | Symptom | First checks |
 | --- | --- |
-| Unknown framework symbols in a build | Check that this example's module pins are v0.6.1, Go is 1.27.2+, and the build uses `GOWORK=off` without local replacements; use `setup.sh` rather than an older copied module file |
+| Unknown framework symbols in a build | Check that this example's module pins are v0.6.2, Go is 1.27.3+, and the build uses `GOWORK=off` without local replacements; use `setup.sh` rather than an older copied module file |
 | Startup rejects credentials | Match identity groups, keep different callers distinct, supply at least 32 characters per service token |
 | Workspace/publication refuses startup | Ready profile requires isolation attestation or explicit development mode; publication-ready profile requires write enablement/credentials |
 | Profile mismatch / stale receipt | Recompute affected pins, rebuild both coordinator and assessment where applicable; drain before policy cutover |
@@ -1112,14 +1115,14 @@ template into their own configuration and keep pod grace longer than drains.
 | Infrastructure ownership | Implemented: setup operates maintenance workloads only and refuses shared infrastructure creation. |
 | Credential ownership | Implemented: component `.env.example` files, explicit backed-up migration, per-component validation and caller/receiver comparisons. |
 | All-components entry point | Implemented: `deploy-all` and `test-all`; checks stop on failure. |
-| Offline setup verification | Passed: 47 checks via `node setup.test.mjs` (Node.js required for these development checks only), using synthetic credentials and recording helpers; no real cluster or AI requests. |
-| Workspace image builds | Passed: all eight images built through `setup.sh image`, using the merged framework snapshot. Docker verified; Podman not live-tested in this packaging pass. |
-| Published release | Passed: v0.6.1 pins, module verification, all eight binary/image builds, vet and existing race tests. Running binaries were inspected and link published v0.6.1 modules without replacements. |
+| Offline setup verification | Passed: 63 checks via `node setup.test.mjs` (Node.js required for these development checks only), using synthetic credentials and recording helpers; no real cluster or AI requests. |
+| Workspace image builds | Historical Docker workspace builds passed. Current v0.6.2 verification uses published release builds; current workspace-mode and Podman images were not reverified. |
+| Published release | Passed: v0.6.2 pins with Go 1.27.3, module verification, fresh race tests and vet, all eight release image builds/rollouts and `test-all`. Running binaries link published v0.6.2 modules without replacements. |
 | Target-service safety and public release | Pending: maintainers review the service for safe public consumption, then explicitly authorize its public release. Changing repository visibility is not a setup step. |
 | Fork portability | Support for configuring the repository identity is available on the target service's `main` starting with commit `c714bf1`, with build-time resolution from GitHub `origin` and an explicit override. Adoption in the selected fork and deployment, followed by a complete run that reads source and creates a draft PR inside a user-owned fork, remains pending; public visibility alone does not close this gate. |
-| Live acceptance | Existing-cluster v0.6.1 WELCOME100 run passed on 2026-10-16: ordinary traffic and scheduled collection produced reviewed draft PR #26; all three executions completed and assessment/trace readback passed. Cold bootstrap, external-fork portability and a v0.6.1 open-PR repeat remain unverified. Historical v0.6.0 evidence is retained below. |
+| Live acceptance | Qualified existing-cluster v0.6.2 result on 2026-11-06: scheduled traffic produced verified draft PR #32 and a stored assessment. Coordinator and review succeeded; repair retained a recovered framework panic and aggregate failure. This is not a clean all-agent pass. |
 
-### Packaging review and verification
+### Historical packaging review and verification
 
 Reviewed `setup.sh`, `setup-lib.sh`, component environment templates, Dockerfiles
 and module/import changes against the framework's Agent Development Guide
@@ -1150,6 +1153,63 @@ image verification uses an exact snapshot of merged framework commit
 `c747bdc331b608915a5a5367a5be48da6d057140`, not unpublished framework worktree edits;
 all eight images built successfully through the example's setup script.
 Container builds alone do not close the live-acceptance gate above.
+
+### v0.6.2 release adoption verification (2026-11-06)
+
+All five framework modules used by this example are pinned together to v0.6.2.
+The module minimum and all release/workspace build images use Go 1.27.3. The
+sandbox runner uses the official Go 1.27.3 image index digest, with dependent
+profile fingerprints updated in order; command, permission and resource limits
+remain unchanged.
+
+Fresh race tests passed in 17 test packages, along with module verification,
+vet, all 63 setup checks and configuration validation. All eight components
+were built and rolled out through `setup.sh` in release mode using the published
+v0.6.2 setup helpers. `test-all`, skills and preflight passed. Running executable
+metadata and image identities confirmed Go 1.27.3, published v0.6.2 dependencies
+and no local replacements. Existing credentials, model overrides, shared
+infrastructure and the dirty sibling framework checkout were preserved.
+Collection remains disabled.
+
+The agents use framework-managed `BaseAgent` servers and pass request contexts
+to orchestration, so v0.6.2 supplies incoming delegation lineage automatically.
+No domain-specific lineage implementation or new clarification workflow is added.
+The release raises the default tool-selector output allowance to 20,000 tokens
+and changes the OpenRouter `smart` alias to `z-ai/glm-5.3`; review these defaults
+when planning paid runs, retaining explicit model overrides where needed.
+
+A subsequent authorized v0.6.2 run sent three ordinary MUG orders. Scheduled
+collection admitted one case; the coordinator completed with
+`execution_success=true` and disposition `draft_pr_opened`. All 46 real
+OpenRouter calls succeeded, with no provider retries or token-limit responses.
+Three actual Kind Jobs used the new runner digest: baseline reproduction failed
+only the named regression, the candidate suite recorded 39 passing test events,
+and vet exited zero. Complete logs matched trusted receipt hashes and lengths;
+independent review approved without blocking findings.
+
+[Retail Order Service draft PR #32](https://github.com/truvaagents/retail-order-service/pull/32)
+contains exactly the staged source/test bytes. Its commit and title/body hashes
+match the successful publication receipt. Assessment version 3 and 21 attributable
+coordinator memory events were read back. Registry Viewer in a real browser,
+prompts, skill bindings, logs and the 846-span trace were inspected. Both delegated
+executions record their immediate parent and parent step correctly.
+
+**Known framework failure:** repair execution
+`maintenance-repair-1793996467035079168` retained a failed `step-15`. A generated
+plan omitted capability metadata; the framework accepted it and recovered a
+nil-pointer panic in `ContextualReResolver.buildReResolutionPrompt`
+(`orchestration/contextual_re_resolver.go:332`). Later steps produced the verified
+candidate, but repair's aggregate execution success remains false. Coordinator
+and review succeeded. This is a completed business case, not a clean all-agent
+pass; the framework issue is being investigated separately.
+
+Only prior test PR #31 was closed with operator authorization, preserving its
+branch/history. PR #28 remained unchanged and PR #32 remains a draft; no repair
+was merged or deployed. Collection was disabled after terminal completion, with
+matching rebuilt profiles and all eight deployments ready. An earlier v0.6.1
+attempt timed out while creating PR #31; its failure and separate publication
+reconciliation remain historical evidence. Cold bootstrap, external-fork and
+production-isolation acceptance remain outside this verification.
 
 ### v0.6.1 release adoption verification (2026-10-16)
 
@@ -1248,7 +1308,7 @@ Current boundaries remain explicit:
 - Automatic admission is currently finite per run; indefinitely unattended
   monitoring needs the explicit continuous-mode extension described under
   [Operational triggers and run controls](#operational-triggers-and-run-controls).
-- Published dependencies are pinned to v0.6.1. Fresh-install live verification
+- Published dependencies are pinned to v0.6.2. Fresh-install live verification
   remains pending; repository paths and component configuration are prepared here.
 - Cancellation protection is a best-effort application guard; crash-safe task
   delivery/recovery is not established here.
@@ -1266,15 +1326,15 @@ Current boundaries remain explicit:
 The relevant framework contracts live in the framework repository, not private
 investigation notes:
 
-- [Agent Development Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/building/AGENT_DEVELOPMENT_GUIDE.md)
-  and [Tool Development Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/building/TOOL_DEVELOPMENT_GUIDE.md),
-  plus the [Agent Skills Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/orchestration/AGENT_SKILLS_GUIDE.md).
-- [Framework Design Principles](https://github.com/truvaagents/truva-g3/blob/v0.6.1/FRAMEWORK_DESIGN_PRINCIPLES.md),
-  [Distributed Tracing Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/observability/DISTRIBUTED_TRACING_GUIDE.md)
-  and [Logging Implementation Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.1/docs/observability/LOGGING_IMPLEMENTATION_GUIDE.md).
-- [Core architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.1/core/ARCHITECTURE.md),
-  [orchestration architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.1/orchestration/ARCHITECTURE.md)
-  and [telemetry architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.1/telemetry/ARCHITECTURE.md).
+- [Agent Development Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.2/docs/building/AGENT_DEVELOPMENT_GUIDE.md)
+  and [Tool Development Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.2/docs/building/TOOL_DEVELOPMENT_GUIDE.md),
+  plus the [Agent Skills Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.2/docs/orchestration/AGENT_SKILLS_GUIDE.md).
+- [Framework Design Principles](https://github.com/truvaagents/truva-g3/blob/v0.6.2/FRAMEWORK_DESIGN_PRINCIPLES.md),
+  [Distributed Tracing Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.2/docs/observability/DISTRIBUTED_TRACING_GUIDE.md)
+  and [Logging Implementation Guide](https://github.com/truvaagents/truva-g3/blob/v0.6.2/docs/observability/LOGGING_IMPLEMENTATION_GUIDE.md).
+- [Core architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.2/core/ARCHITECTURE.md),
+  [orchestration architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.2/orchestration/ARCHITECTURE.md)
+  and [telemetry architecture](https://github.com/truvaagents/truva-g3/blob/v0.6.2/telemetry/ARCHITECTURE.md).
 
 These links pin the framework version used by this example. When upgrading,
 review the new release's contracts and the actual implementation together.

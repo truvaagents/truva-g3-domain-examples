@@ -1,7 +1,8 @@
 # Maintenance publication tool — implementation reference
 
-Updated on 2026-10-16 to document safeguards for concurrent publication and
-adoption of published v0.6.1 framework dependencies. See the
+Current published framework dependencies: v0.6.2.
+
+Includes the concurrent-publication safeguards introduced on 2026-10-16. See the
 [README](../../README.md) and [profile guide](../../PROFILE_SETUP_GUIDE.md)
 before enabling writes.
 
@@ -63,6 +64,11 @@ The supplied profile has `publication_ready: true`, and the environment template
 sets `MAINTENANCE_PUBLICATION_ENABLE_WRITES=true` to match the local development
 setup. Credentials and explicit operator authorization are still required;
 template settings alone grant no write permission.
+
+The authorized v0.6.2 run created [draft PR #32](https://github.com/truvaagents/retail-order-service/pull/32)
+with a succeeded receipt and exact staged file, commit and title/body identities.
+No manual publication reconciliation was needed. The repair agent retained a
+framework recovery failure; see the [qualified live result](../../README.md#v062-release-adoption-verification-2026-11-06).
 
 The v0.6.0 run inspected existing work and created draft PR #16 for the correct
 WELCOME100 repair after baseline/candidate verification and independent review.

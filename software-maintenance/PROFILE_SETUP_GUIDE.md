@@ -293,7 +293,7 @@ The `rebuild` command also deploys this component if it is not installed yet;
 shared infrastructure must already be available.
 
 ```bash
-# Use the example's pinned, published framework modules (v0.6.1).
+# Use the example's pinned, published framework modules (v0.6.2).
 export MAINTENANCE_FRAMEWORK_SOURCE=release
 ./setup.sh rebuild evidence
 ```
