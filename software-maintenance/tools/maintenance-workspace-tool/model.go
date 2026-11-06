@@ -71,6 +71,22 @@ type workspaceRecord struct {
 	Limitations         []string  `json:"limitations"`
 }
 
+// Creation metadata is projected after authorization, outside the immutable receipt.
+// Only command identifiers and numeric limits are public; argv and runner settings stay private.
+type workspaceCreationResponse struct {
+	workspaceRecord
+	AllowedCommandIDs []string        `json:"allowed_command_ids"`
+	Limits            workspaceLimits `json:"limits"`
+}
+
+func workspaceCreationResult(record workspaceRecord, profile workspaceProfile) workspaceCreationResponse {
+	commands := make([]string, 0, len(profile.ExperimentCommands))
+	for _, command := range profile.ExperimentCommands {
+		commands = append(commands, command.ID)
+	}
+	return workspaceCreationResponse{workspaceRecord: record, AllowedCommandIDs: commands, Limits: profile.Limits}
+}
+
 type candidateFile struct {
 	Path                 string  `json:"path"`
 	BaseSHA256           string  `json:"base_sha256"`

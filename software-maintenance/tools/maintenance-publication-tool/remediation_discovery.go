@@ -37,15 +37,21 @@ type openRemediation struct {
 	HeadSHA           string `json:"head_sha"`
 }
 
+type publicationTextLimits struct {
+	MaximumTitleBytes int `json:"maximum_title_bytes"`
+	MaximumBodyBytes  int `json:"maximum_body_bytes"`
+}
+
 type openRemediations struct {
-	RepositoryViewID string            `json:"repository_view_id,omitempty"`
-	ProfileID        string            `json:"profile_id"`
-	RepositoryID     string            `json:"repository_id"`
-	BaseRef          string            `json:"base_ref"`
-	PullRequests     []openRemediation `json:"pull_requests"`
-	Complete         bool              `json:"complete"`
-	ObservedAt       time.Time         `json:"observed_at"`
-	Limitations      []string          `json:"limitations"`
+	PublicationLimits publicationTextLimits `json:"publication_limits"`
+	RepositoryViewID  string                `json:"repository_view_id,omitempty"`
+	ProfileID         string                `json:"profile_id"`
+	RepositoryID      string                `json:"repository_id"`
+	BaseRef           string                `json:"base_ref"`
+	PullRequests      []openRemediation     `json:"pull_requests"`
+	Complete          bool                  `json:"complete"`
+	ObservedAt        time.Time             `json:"observed_at"`
+	Limitations       []string              `json:"limitations"`
 }
 
 type githubPullFile struct {
@@ -88,7 +94,8 @@ func readLimit(value *int, fallback int) int {
 
 func (operations *publicationOperations) readOpenRemediations(ctx context.Context, profile publicationProfile) (openRemediations, error) {
 	result := openRemediations{ProfileID: profile.PublicationProfileID, RepositoryID: profile.RepositoryID, BaseRef: profile.BaseRef,
-		PullRequests: []openRemediation{}, Limitations: []string{"Repository PR discovery is a lookup lead; title, state and commit identities do not establish issue applicability or deployment."}}
+		PublicationLimits: publicationTextLimits{MaximumTitleBytes: profile.Limits.MaximumTitleBytes, MaximumBodyBytes: profile.Limits.MaximumBodyBytes},
+		PullRequests:      []openRemediation{}, Limitations: []string{"Repository PR discovery is a lookup lead; title, state and commit identities do not establish issue applicability or deployment."}}
 	if operations.github == nil {
 		return result, rejectRemediation(http.StatusServiceUnavailable, "REMEDIATION_NOT_READY", "Configure repository-read credentials", core.CategoryServiceError, false)
 	}

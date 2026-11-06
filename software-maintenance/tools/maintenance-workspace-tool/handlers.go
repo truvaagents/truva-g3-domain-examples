@@ -40,7 +40,7 @@ func (tool *maintenanceWorkspaceTool) handleCreateWorkspace(writer http.Response
 		tool.failOperation(writer, request, capability, profile.WorkspaceProfileID, started, err)
 		return
 	}
-	tool.succeed(writer, request, capability, profile.WorkspaceProfileID, started, http.StatusOK, record)
+	tool.succeed(writer, request, capability, profile.WorkspaceProfileID, started, http.StatusOK, workspaceCreationResult(record, profile))
 }
 
 func (tool *maintenanceWorkspaceTool) handleStageCandidate(writer http.ResponseWriter, request *http.Request) {
