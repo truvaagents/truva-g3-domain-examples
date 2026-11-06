@@ -3,11 +3,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {once} from 'node:events';
 import {fileURLToPath} from 'node:url';
-import {spawnSync} from 'node:child_process';
+import {spawn, spawnSync} from 'node:child_process';
 
 const source = path.dirname(fileURLToPath(import.meta.url));
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'maintenance-setup-test.'));
+// Model public checkout files consistently; individual image tests use umask 077.
+const fixtureUmask = process.umask(0o022);
 const example = path.join(root, 'domain/software-maintenance');
 const framework = path.join(root, 'framework');
 const dirs = ['tools/maintenance-evidence-tool', 'tools/maintenance-source-tool',
@@ -44,6 +48,7 @@ try {
     '    test -f "$3/framework/core/go.mod"',
     '    test -f "$3/software-maintenance/go.mod"',
     '  else test -f "$3/go.mod"; fi',
+    '  if [[ -n "${BUILD_CONTEXT_CHECK:-}" ]]; then node "$BUILD_CONTEXT_CHECK" "$3" "${MAINTENANCE_FRAMEWORK_SOURCE:-release}" "$(umask)"; fi',
     '  echo "CAPTURED_CONTEXT"',
     '}',
     'truvag3_create_configmap() {',
@@ -67,6 +72,55 @@ try {
   const ok = result => assert.equal(result.status, 0, result.stdout + result.stderr);
   const fails = (result, text) => {assert.notEqual(result.status, 0); assert.match(result.stdout + result.stderr, text);};
   ok(run(['help'], {TRUVAG3_ROOT: path.join(root, 'missing')})); passed++;
+  const readinessFixture = path.join(root, 'readiness-fixture.mjs');
+  const readinessRequests = path.join(root, 'readiness-requests.json');
+  const readinessArgs = path.join(root, 'readiness-curl-args');
+  write(readinessFixture, String.raw`
+import fs from 'node:fs';
+import http from 'node:http';
+const requests = {};
+const server = http.createServer((request, response) => {
+  const key = request.method + ' ' + request.url;
+  requests[key] = (requests[key] || 0) + 1;
+  fs.writeFileSync(process.argv[2], JSON.stringify(requests));
+  const status = request.url === '/transient' ? (requests[key] < 3 ? 502 : 200) :
+    request.url === '/unauthorized' ? 401 : request.url === '/forbidden' ? 403 : 503;
+  response.writeHead(status).end(status === 200 ? 'ready' : 'not ready');
+});
+server.listen(0, '127.0.0.1', () => process.send({port: server.address().port}));
+`);
+  const readinessServer = spawn(process.execPath, [readinessFixture, readinessRequests],
+    {stdio: ['ignore', 'ignore', 'inherit', 'ipc']});
+  try {
+    const [address] = await Promise.race([
+      once(readinessServer, 'message'),
+      once(readinessServer, 'exit').then(([code]) => {throw new Error('readiness fixture exited: ' + code);})
+    ]);
+    const readinessScript = 'source "$1/setup.sh" help >/dev/null; curl() { printf "%s\\n" "$@" > "$READINESS_CURL_ARGS"; command curl "$@"; }; readiness_get "$2"';
+    for (const [route, expectedRequests, succeeds] of [['transient', 3, true], ['persistent', 6, false],
+      ['unauthorized', 1, false], ['forbidden', 1, false]]) {
+      const result = spawnSync('bash', ['-c', readinessScript, 'check', example, 'http://127.0.0.1:' + address.port + '/' + route],
+        {cwd: example, env: {...env, READINESS_CURL_ARGS: readinessArgs, NO_PROXY: '127.0.0.1', no_proxy: '127.0.0.1'}, encoding: 'utf8', timeout: 40000});
+      if (succeeds) {ok(result); assert.equal(result.stdout, 'ready');}
+      else assert.equal(result.status, 22, result.stdout + result.stderr);
+      const requests = JSON.parse(fs.readFileSync(readinessRequests, 'utf8'));
+      assert.equal(requests['GET /' + route], expectedRequests);
+      assert.ok(Object.keys(requests).every(key => key.startsWith('GET ')));
+      const flags = fs.readFileSync(readinessArgs, 'utf8').trim().split('\n');
+      for (const [flag, maximum] of [['--retry', 10], ['--retry-max-time', 60], ['--connect-timeout', 5], ['--max-time', 10]]) {
+        const value = Number(flags[flags.indexOf(flag) + 1]);
+        assert.ok(flags.includes(flag) && value > 0 && value <= maximum, flag + ' must be bounded');
+      }
+      assert.ok(flags.includes('--retry-connrefused'));
+      assert.ok(!flags.includes('--retry-all-errors')); passed++;
+    }
+  } finally {
+    if (readinessServer.exitCode === null) {
+      const stopped = once(readinessServer, 'exit');
+      readinessServer.kill();
+      await stopped;
+    }
+  }
   ok(run(['init-config'])); passed++;
   const token = n => String(n).repeat(40);
   const identity = key => {
@@ -133,6 +187,56 @@ try {
   fails(run(['validate']), /Shared credential.*differs/); write(pub, savedPub); passed++;
   ok(run(['image', 'evidence'])); passed++;
   ok(run(['image', 'evidence'], {MAINTENANCE_FRAMEWORK_SOURCE: 'workspace'})); passed++;
+  const contextCheck = path.join(root, 'check-build-context.mjs');
+  write(contextCheck, String.raw`
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+const [context, mode, mask] = process.argv.slice(2);
+const permissions = p => fs.statSync(p).mode & 0o777;
+assert.equal(permissions(context), 0o700, 'temporary context root must stay private');
+assert.equal(Number.parseInt(mask, 8), 0o077, 'preparation must preserve the caller umask');
+const base = mode === 'workspace' ? path.join(context, 'software-maintenance') : context;
+const checkPublic = directory => {
+  assert.equal(permissions(directory) & 0o005, 0o005, directory + ' must allow traversal and reading');
+  for (const entry of fs.readdirSync(directory, {withFileTypes: true})) {
+    const p = path.join(directory, entry.name);
+    if (entry.isDirectory()) checkPublic(p);
+    else assert.equal(permissions(p) & 0o004, 0o004, p + ' must be readable by the image user');
+  }
+};
+checkPublic(path.join(base, 'profiles'));
+if (mode === 'workspace') {
+  for (const directory of [base, path.join(context, 'framework')])
+    assert.equal(permissions(directory) & 0o005, 0o005);
+}
+const checkPrivacy = directory => {
+  for (const entry of fs.readdirSync(directory, {withFileTypes: true})) {
+    assert.ok(!entry.name.startsWith('.env'), 'environment file entered build context');
+    if (entry.isDirectory()) checkPrivacy(path.join(directory, entry.name));
+  }
+};
+checkPrivacy(context);
+fs.writeFileSync(process.env.BUILD_CONTEXT_REPORT, JSON.stringify({mode, root_mode: permissions(context), caller_umask: mask, profiles_readable: true, environment_files_absent: true}));
+`);
+  const privateInputs = [path.join(example, '.env'), path.join(example, 'tools/maintenance-evidence-tool/.env'),
+    path.join(framework, 'core/.env')];
+  const publicInputs = [path.join(example, 'profiles'), path.join(example, 'profiles/retail-order-service.json'),
+    path.join(example, 'go.mod')];
+  const inputState = () => [...publicInputs, ...privateInputs].map(p => ({
+    path: p, mode: fs.statSync(p).mode & 0o777,
+    sha256: fs.statSync(p).isFile() ? createHash('sha256').update(fs.readFileSync(p)).digest('hex') : null
+  }));
+  const sourceBeforePrivateBuild = inputState();
+  for (const mode of ['release', 'workspace']) {
+    const report = path.join(root, 'build-context-' + mode + '.json');
+    const privateImage = spawnSync('bash', ['-c',
+      'set -e; umask 077; bash "$1/setup.sh" image evidence; test "$(umask)" = 0077', 'check', example],
+      {cwd: example, env: {...env, MAINTENANCE_FRAMEWORK_SOURCE: mode, BUILD_CONTEXT_CHECK: contextCheck, BUILD_CONTEXT_REPORT: report}, encoding: 'utf8'});
+    ok(privateImage);
+    assert.equal(JSON.parse(fs.readFileSync(report, 'utf8')).profiles_readable, true);
+    assert.deepEqual(inputState(), sourceBeforePrivateBuild, 'image preparation changed source modes or contents'); passed++;
+  }
   fails(run(['full-deploy']), /Shared infrastructure is owned/); passed++;
   for (const verb of ['deploy', 'rebuild', 'rollout', 'preflight']) {
     const result = run([verb, 'evidence']);
@@ -163,6 +267,52 @@ try {
   const wrongContext = run(['preflight'], {FAKE_KIND_CLUSTER: 'present'});
   fails(wrongContext, /Select kubectl context/);
   assert.doesNotMatch(wrongContext.stdout + wrongContext.stderr, /Unexpected cluster call/); passed++;
+  const cleanupCalls = path.join(root, 'cleanup-calls');
+  write(path.join(framework, 'examples/k8-deployment/setup-env-lib.sh'), helper + '\n' + [
+    'kubectl() {',
+    '  case "$*" in',
+    '    "config current-context") echo "kind-$CLUSTER_NAME" ;;',
+    '    "get namespace truvag3-examples"|"get service redis -n truvag3-examples") : ;;',
+    '    delete*)',
+    '      printf "%s\\n" "$*" >> "$CLEANUP_CALLS"',
+    '      if [[ "$2" == jobs ]]; then',
+    '        if [[ "${CLEANUP_FAIL_JOBS:-false}" == true ]]; then echo "Fixture Job cleanup failed" >&2; return 42; fi',
+    '        if [[ "${CLEANUP_EMPTY_JOBS:-false}" == true ]]; then echo "No resources found"; fi',
+    '      fi',
+    '      ;;',
+    '    *) echo "Unexpected cluster call" >&2; return 99 ;;',
+    '  esac',
+    '}'
+  ].join('\n'));
+  const cleanup = (component, overrides = {}) => {
+    write(cleanupCalls, '');
+    const result = run(['cleanup', component], {FAKE_KIND_CLUSTER: 'present', CLEANUP_CALLS: cleanupCalls, ...overrides});
+    return {result, calls: fs.readFileSync(cleanupCalls, 'utf8').trim().split('\n').filter(Boolean)};
+  };
+  const expectedWorkspaceCleanup = [
+    'delete jobs -n software-maintenance -l app=maintenance-workspace-tool,maintenance-sandbox=true --cascade=foreground --wait=true --timeout=120s --ignore-not-found',
+    'delete -f ' + path.join(example, 'deploy/maintenance-workspace-tool.yaml') + ' --ignore-not-found',
+    'delete configmap maintenance-workspace-tool-env-config -n software-maintenance --ignore-not-found',
+    'delete secret maintenance-workspace-tool-secrets -n software-maintenance --ignore-not-found'
+  ];
+  const workspaceCleanup = cleanup('workspace');
+  ok(workspaceCleanup.result);
+  assert.deepEqual(workspaceCleanup.calls, expectedWorkspaceCleanup); passed++;
+  const emptyWorkspaceCleanup = cleanup('workspace', {CLEANUP_EMPTY_JOBS: 'true'});
+  ok(emptyWorkspaceCleanup.result);
+  assert.deepEqual(emptyWorkspaceCleanup.calls, expectedWorkspaceCleanup); passed++;
+  const failedWorkspaceCleanup = cleanup('workspace', {CLEANUP_FAIL_JOBS: 'true'});
+  fails(failedWorkspaceCleanup.result, /Fixture Job cleanup failed/);
+  assert.deepEqual(failedWorkspaceCleanup.calls, [expectedWorkspaceCleanup[0]]); passed++;
+  for (const component of ['evidence', 'source', 'publication', 'repair', 'review', 'assessment', 'coordinator']) {
+    const otherCleanup = cleanup(component);
+    ok(otherCleanup.result);
+    assert.equal(otherCleanup.calls.length, 3);
+    assert.ok(otherCleanup.calls[0].startsWith('delete -f '));
+    assert.ok(otherCleanup.calls.every(call => !call.startsWith('delete jobs ')));
+    assert.ok(otherCleanup.calls.every(call => !call.includes('maintenance-workspace-tool'))); passed++;
+  }
+  write(path.join(framework, 'examples/k8-deployment/setup-env-lib.sh'), helper);
   const coordinatorProfile = path.join(example, 'profiles/retail-order-maintenance.json');
   const savedCoordinatorProfile = fs.readFileSync(coordinatorProfile, 'utf8');
   const changedVersion = JSON.parse(savedCoordinatorProfile);
@@ -199,4 +349,5 @@ try {
   console.log(passed + ' offline setup checks passed; no external operations');
 } finally {
   fs.rmSync(root, {recursive: true, force: true});
+  process.umask(fixtureUmask);
 }
