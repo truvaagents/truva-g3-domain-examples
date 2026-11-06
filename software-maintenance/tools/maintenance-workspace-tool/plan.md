@@ -1,6 +1,6 @@
 # Maintenance workspace tool — implementation reference
 
-Implemented with published TruvaG3 v0.6.1 dependencies. See the
+Implemented with published TruvaG3 v0.6.2 dependencies. See the
 [README](../../README.md) for deployment and sandbox requirements.
 
 ## Responsibility and capabilities
@@ -75,7 +75,12 @@ UTF-8 byte limits, authorized command/limit disclosure and strict receipt reads.
 
 ## Verification
 
-The latest local Kind acceptance on 2026-11-05 exercised this implementation with
+The v0.6.2 run on 2026-11-06 verified three Jobs on the updated Go 1.27.3 runner,
+matching complete artifact bytes to receipts, candidate tests/vet and independent
+review. Draft PR #32 matched the staged files. Repair retained a recovered
+framework panic; see the [qualified result and request ID](../../README.md#v062-release-adoption-verification-2026-11-06).
+
+The recorded local Kind acceptance on 2026-11-05 exercised this implementation with
 published v0.6.1 modules and Go 1.27.2, without local framework replacements:
 
 - Module verification, full Go tests, vet and build passed. Shell syntax,
