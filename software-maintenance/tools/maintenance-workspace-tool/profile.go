@@ -90,6 +90,17 @@ func validateWorkspaceProfile(profile *workspaceProfile) error {
 		}
 		profile.DeniedPaths[index] = normalized
 	}
+	if len(profile.ProtectedPaths) > 64 {
+		return errors.New("too many protected candidate paths")
+	}
+	seenProtected := map[string]bool{}
+	for _, protected := range profile.ProtectedPaths {
+		normalized, err := normalizeWorkspacePath(protected)
+		if err != nil || normalized != protected || seenProtected[protected] {
+			return errors.New("protected candidate paths must be normalized and unique")
+		}
+		seenProtected[protected] = true
+	}
 	if len(profile.ExperimentCommands) == 0 || len(profile.ExperimentCommands) > 16 {
 		return errors.New("experiment commands are invalid")
 	}
@@ -151,6 +162,15 @@ func (profile workspaceProfile) denies(candidate string) bool {
 	}
 	for _, denied := range profile.DeniedPaths {
 		if candidate == denied || strings.HasPrefix(candidate, denied+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+func (profile workspaceProfile) protects(candidate string) bool {
+	for _, protected := range profile.ProtectedPaths {
+		if candidate == protected || strings.HasPrefix(candidate, protected+"/") {
 			return true
 		}
 	}

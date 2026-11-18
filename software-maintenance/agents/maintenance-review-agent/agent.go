@@ -115,9 +115,10 @@ func (agent *maintenanceReviewAgent) InitializeOrchestrator(ctx context.Context,
 		ReasoningEffort: orchestration.StringPtr("low"),
 	}
 	base.SynthesisAIOptions = &orchestration.AIOptionsOverride{
-		Model:          orchestration.StringPtr("default"),
-		Temperature:    orchestration.Float32Ptr(0.1),
-		ResponseFormat: orchestration.StringPtr("json"),
+		Model:           orchestration.StringPtr("default"),
+		Temperature:     orchestration.Float32Ptr(0.1),
+		ResponseFormat:  orchestration.StringPtr("json"),
+		ReasoningEffort: orchestration.StringPtr("low"),
 	}
 	base.MicroResolutionAIOptions = &orchestration.AIOptionsOverride{
 		Model: orchestration.StringPtr("fast"),
@@ -200,7 +201,7 @@ func (agent *maintenanceReviewAgent) shutdownOrchestrator(ctx context.Context) e
 func (agent *maintenanceReviewAgent) registerCapabilities() {
 	agent.RegisterCapability(core.Capability{
 		Name:        "review_maintenance_change",
-		Description: "Independently reviews one exact candidate against approved contract evidence and trusted runner receipts, optionally gathering additional read-only evidence or isolated experiments. Required: profile_id, case_id, candidate_id, verification_id, objective. Returns a decision and execution identity. Only evidence-validated approval includes an authenticated review receipt; negative or inconclusive decisions need not produce one.",
+		Description: "Independently reviews one exact candidate against approved contract evidence and trusted runner receipts, optionally gathering additional read-only evidence or isolated experiments. Required: profile_id, case_id, candidate_id, verification_id, objective. Returns a decision, execution identity and, when configured, server-owned acceptance_scope with stage, required_candidate_command_ids and deferred_runtime_checks. Only evidence-validated approval includes an authenticated review receipt; negative or inconclusive decisions need not produce one.",
 		Type:        core.CapabilityOrchestrator, InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: agent.handleReview,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "profile_id", Type: "string", Example: "retail-order-review"},
@@ -217,6 +218,7 @@ func (agent *maintenanceReviewAgent) registerCapabilities() {
 			{Name: "review_profile_sha256", Type: "string"}, {Name: "status", Type: "string"},
 			{Name: "summary", Type: "string"}, {Name: "tools_used", Type: "array"}, {Name: "confidence", Type: "number"},
 		}, OptionalFields: []core.FieldHint{
+			{Name: "acceptance_scope", Type: "object", Description: "Server-owned review policy with stage, required_candidate_command_ids and deferred_runtime_checks. Report listed deferred checks as pending deployment requirements, not passed checks. Absent for legacy profiles; absence grants no deferral authority. Policy metadata alone grants no approval"},
 			{Name: "failed_operations", Type: "object", Description: "Optional bounded recorded failed attempts keyed by step ID; absent when none are projected; individual entries may be null when omitted by budget. Grants no authority"},
 			{Name: "review", Type: "object", Description: "Authenticated approval receipt; absent for rejected or inconclusive decisions"},
 			{Name: "review_id", Type: "string", Description: "Assigned by the review service to an approval receipt; the model supplies the decision, not this identity"},

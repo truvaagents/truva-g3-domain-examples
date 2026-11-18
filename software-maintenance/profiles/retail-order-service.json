@@ -10,8 +10,8 @@
   "contract_references": [
     {
       "kind": "git",
-      "revision": "9b8dae6dde77512050847af998410764716655cd",
-      "path": "README.md"
+      "revision": "fc24666f9876dcf7e45069c139d7fbacf2724347",
+      "path": "SERVICE_CONTRACT.md"
     }
   ],
   "upstream": {

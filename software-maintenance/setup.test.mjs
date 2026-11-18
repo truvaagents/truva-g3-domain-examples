@@ -187,6 +187,22 @@ server.listen(0, '127.0.0.1', () => process.send({port: server.address().port}))
   fails(run(['validate']), /Shared credential.*differs/); write(pub, savedPub); passed++;
   ok(run(['image', 'evidence'])); passed++;
   ok(run(['image', 'evidence'], {MAINTENANCE_FRAMEWORK_SOURCE: 'workspace'})); passed++;
+  const coordinatorEnv = path.join(example, 'agents/maintenance-agent/.env');
+  const originalEnv = fs.readFileSync(coordinatorEnv, 'utf8');
+  const alternate = path.join(root, 'source worktree');
+  fs.cpSync(framework, alternate, {recursive: true});
+  write(path.join(alternate, 'orchestration/source-marker'), 'reviewed source\n');
+  fs.appendFileSync(coordinatorEnv, '\nMAINTENANCE_FRAMEWORK_SOURCE=workspace\nMAINTENANCE_WORKSPACE_ROOT="' + alternate + '"\n');
+  const verifySource = path.join(root, 'verify-coordinator-source.mjs');
+  write(verifySource, `import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+assert.equal(fs.existsSync(path.join(process.argv[2], 'framework/orchestration/source-marker')), process.env.EXPECT_SOURCE === 'workspace');
+assert.equal(process.argv[3], process.env.EXPECT_SOURCE);`);
+  ok(run(['image', 'coordinator'], {BUILD_CONTEXT_CHECK: verifySource, EXPECT_SOURCE: 'workspace'}));
+  ok(run(['image', 'coordinator'], {MAINTENANCE_FRAMEWORK_SOURCE: 'release', BUILD_CONTEXT_CHECK: verifySource, EXPECT_SOURCE: 'release'}));
+  ok(run(['image', 'evidence'], {BUILD_CONTEXT_CHECK: verifySource, EXPECT_SOURCE: 'release'}));
+  write(coordinatorEnv, originalEnv); passed++;
   const contextCheck = path.join(root, 'check-build-context.mjs');
   write(contextCheck, String.raw`
 import assert from 'node:assert/strict';

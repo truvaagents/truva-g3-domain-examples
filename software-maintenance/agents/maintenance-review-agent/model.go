@@ -35,19 +35,27 @@ func (limits reviewLimits) findingLimit() int {
 	return limits.MaximumReferenceBytes
 }
 
+// Acceptance scope is operator-owned policy, never supplied in a review request.
+type reviewAcceptanceScope struct {
+	Stage                       string   `json:"stage"`
+	RequiredCandidateCommandIDs []string `json:"required_candidate_command_ids"`
+	DeferredRuntimeChecks       []string `json:"deferred_runtime_checks"`
+}
+
 type reviewProfile struct {
-	SchemaVersion                  int          `json:"schema_version"`
-	ReviewProfileID                string       `json:"review_profile_id"`
-	ReviewReady                    bool         `json:"review_ready"`
-	ServiceProfileID               string       `json:"service_profile_id"`
-	WorkspaceProfileID             string       `json:"workspace_profile_id"`
-	ExpectedServiceProfileVersion  string       `json:"expected_service_profile_version"`
-	ExpectedSourceProfileSHA256    string       `json:"expected_source_profile_sha256"`
-	ExpectedWorkspaceProfileSHA256 string       `json:"expected_workspace_profile_sha256"`
-	RepositoryID                   string       `json:"repository_id"`
-	AllowedCallers                 []string     `json:"allowed_callers"`
-	Limits                         reviewLimits `json:"limits"`
-	Limitations                    []string     `json:"limitations"`
+	SchemaVersion                  int                    `json:"schema_version"`
+	ReviewProfileID                string                 `json:"review_profile_id"`
+	ReviewReady                    bool                   `json:"review_ready"`
+	ServiceProfileID               string                 `json:"service_profile_id"`
+	WorkspaceProfileID             string                 `json:"workspace_profile_id"`
+	ExpectedServiceProfileVersion  string                 `json:"expected_service_profile_version"`
+	ExpectedSourceProfileSHA256    string                 `json:"expected_source_profile_sha256"`
+	ExpectedWorkspaceProfileSHA256 string                 `json:"expected_workspace_profile_sha256"`
+	RepositoryID                   string                 `json:"repository_id"`
+	AllowedCallers                 []string               `json:"allowed_callers"`
+	Limits                         reviewLimits           `json:"limits"`
+	Limitations                    []string               `json:"limitations"`
+	AcceptanceScope                *reviewAcceptanceScope `json:"acceptance_scope,omitempty"`
 
 	callerSet     map[string]struct{}
 	profileSHA256 string
@@ -125,6 +133,7 @@ type reviewResponse struct {
 	CandidateID         string                     `json:"candidate_id"`
 	VerificationID      string                     `json:"verification_id"`
 	ReviewProfileSHA256 string                     `json:"review_profile_sha256"`
+	AcceptanceScope     *reviewAcceptanceScope     `json:"acceptance_scope,omitempty"`
 	Status              string                     `json:"status"`
 	Summary             string                     `json:"summary"`
 	ToolsUsed           []string                   `json:"tools_used"`

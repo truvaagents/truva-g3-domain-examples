@@ -107,6 +107,39 @@ func validateReviewProfile(profile *reviewProfile) error {
 			return errors.New("review profile contains an invalid limitation")
 		}
 	}
+	if err := validateAcceptanceScope(profile.AcceptanceScope); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateAcceptanceScope(scope *reviewAcceptanceScope) error {
+	// Legacy profiles make no stage-specific deferrals.
+	if scope == nil {
+		return nil
+	}
+	if scope.Stage != "draft_pr" || len(scope.RequiredCandidateCommandIDs) < 1 || len(scope.RequiredCandidateCommandIDs) > 8 || len(scope.DeferredRuntimeChecks) > 4 {
+		return errors.New("review acceptance scope is invalid")
+	}
+	seen := map[string]bool{}
+	for _, id := range scope.RequiredCandidateCommandIDs {
+		if !reviewNamePattern.MatchString(id) || seen[id] {
+			return errors.New("review acceptance commands must be valid and unique")
+		}
+		seen[id] = true
+	}
+	seen = map[string]bool{}
+	for _, check := range scope.DeferredRuntimeChecks {
+		switch check {
+		case "candidate_deployment", "live_smoke", "real_persistence", "runtime_logs_traces":
+		default:
+			return errors.New("unknown deferred runtime check")
+		}
+		if seen[check] {
+			return errors.New("deferred runtime checks must be unique")
+		}
+		seen[check] = true
+	}
 	return nil
 }
 

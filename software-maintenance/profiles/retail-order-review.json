@@ -4,9 +4,9 @@
   "review_ready": true,
   "service_profile_id": "retail-order-service",
   "workspace_profile_id": "retail-order-go",
-  "expected_service_profile_version": "sha256:88f46ed6d47023ce1aa8904e2f57bfd61669f6c2d2864880a06837320fd8cf4c",
+  "expected_service_profile_version": "sha256:ce9798f829674a4ad0c16f80c790d1082fa04dfa4530a087bbb3add6231100a6",
   "expected_source_profile_sha256": "2c7de4910c0035d2cb68d13c46b5cc6e14154f97baeda052b0edab3501609888",
-  "expected_workspace_profile_sha256": "191e7f74030919c133bfb3830b0130cde036609c9b2e9380bc09d15d51d6c702",
+  "expected_workspace_profile_sha256": "3ef172cec0497c39a34e376ea14dee88bd9a43f17616d851cf02144570c059e4",
   "repository_id": "retail-order-service",
   "allowed_callers": [
     "maintenance-agent"
@@ -25,6 +25,19 @@
     "Approval is enabled only for the owner-approved functional acceptance profile and exact trusted receipts.",
     "Functional Kind verification does not establish production-grade network isolation.",
     "A separate model context reduces shared assumptions but does not itself establish correctness.",
-    "Runner receipts establish execution facts; reviewer prose cannot convert a failed or incomplete receipt into a pass."
-  ]
+    "Runner receipts establish execution facts; reviewer prose cannot convert a failed or incomplete receipt into a pass.",
+    "This owner-configured scope authorizes draft review after the repository offline check and independent review. The listed runtime checks are deferred only at this stage and remain required before deployment approval; draft approval makes no runtime-validation claim."
+  ],
+  "acceptance_scope": {
+    "stage": "draft_pr",
+    "required_candidate_command_ids": [
+      "repository-check"
+    ],
+    "deferred_runtime_checks": [
+      "candidate_deployment",
+      "live_smoke",
+      "real_persistence",
+      "runtime_logs_traces"
+    ]
+  }
 }

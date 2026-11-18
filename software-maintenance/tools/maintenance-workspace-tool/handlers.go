@@ -282,7 +282,7 @@ func (tool *maintenanceWorkspaceTool) handleGetReviewBundle(writer http.Response
 		tool.failOperation(writer, request, capability, "", started, err)
 		return
 	}
-	response, err := buildReviewBundleResponse(bundle)
+	response, err := tool.operations.buildReviewBundleResponse(bundle)
 	if err != nil {
 		tool.failOperation(writer, request, capability, profile.WorkspaceProfileID, started, err)
 		return
@@ -290,7 +290,7 @@ func (tool *maintenanceWorkspaceTool) handleGetReviewBundle(writer http.Response
 	tool.succeed(writer, request, capability, profile.WorkspaceProfileID, started, http.StatusOK, response)
 }
 
-func buildReviewBundleResponse(bundle publicationBundleResponse) (reviewBundleResponse, error) {
+func (operations *workspaceOperations) buildReviewBundleResponse(bundle publicationBundleResponse) (reviewBundleResponse, error) {
 	const maximumPreviewBytes = 128 << 10
 	remaining := maximumPreviewBytes
 	previews := make([]reviewCandidateFilePreview, 0, len(bundle.Candidate.Files))
@@ -310,6 +310,12 @@ func buildReviewBundleResponse(bundle publicationBundleResponse) (reviewBundleRe
 		}
 		digest := sha256.Sum256(content)
 		preview.ContentSHA256 = hex.EncodeToString(digest[:])
+		if preview.Test {
+			preview.TargetSHA256, err = operations.regressionTargetDigests(bundle.Candidate, file.Path, len(content), digest)
+			if err != nil {
+				return reviewBundleResponse{}, err
+			}
+		}
 		if !utf8.Valid(content) {
 			previews = append(previews, preview)
 			continue

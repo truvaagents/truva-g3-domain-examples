@@ -20,11 +20,18 @@ func TestReviewDiscoveryContract(t *testing.T) {
 			response.ReviewID = "review-fixture"
 		}
 		discoverytest.Output(t, capability, response, "review", "review_id")
+		response.AcceptanceScope = &reviewAcceptanceScope{Stage: "draft_pr", RequiredCandidateCommandIDs: []string{"repository-check"}, DeferredRuntimeChecks: []string{"live_smoke"}}
+		discoverytest.Output(t, capability, response, "acceptance_scope")
 		response.FailedOperations = map[string]json.RawMessage{"step": json.RawMessage(`null`)}
 		discoverytest.Output(t, capability, response, "failed_operations")
 	}
 	catalog := discoverytest.Catalog(t, agent.GetCapabilities())
 	if !strings.Contains(catalog, "line breaks and tabs are allowed") {
 		t.Fatal("planner lacks review text restrictions")
+	}
+	for _, field := range []string{"acceptance_scope", "required_candidate_command_ids", "deferred_runtime_checks"} {
+		if !strings.Contains(catalog, field) {
+			t.Fatalf("planner lacks server-owned review scope field %s", field)
+		}
 	}
 }

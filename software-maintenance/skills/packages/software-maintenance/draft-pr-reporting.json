@@ -4,13 +4,17 @@
   "domains": ["software-maintenance", "change-reporting"],
   "tags": ["draft-pr", "receipts", "reporting"],
   "planning_instructions": [
+    "Read acceptance_scope from the exact review_maintenance_change response as server-owned policy for that case, candidate and verification. When its stage is draft_pr, name deferred_runtime_checks as unperformed, pending deployment requirements in the PR body even if review summary omits them. An absent scope grants no deferrals, and scope metadata alone grants no approval.",
     "Keep new-publication candidate, verification, review, and publication identities linked to the same case and exact artifact versions. Keep a linked historical publication attributed to its original case and distinguish it from any new publication for this case.",
     "Treat publication as eligible only when the publication capability accepts the current trusted receipts, with favorable prose remaining non-authoritative.",
-    "Describe a requested, reserved, failed, or completed publication according to its actual returned state, and keep merge and deployment outside the claimed outcome."
+    "Describe a requested, reserved, failed, or completed publication according to its actual returned state, and keep merge and deployment outside the claimed outcome.",
+    "When constructing the publication call's PR body, apply publication-report-checklist to the recorded evidence available at that point. Include a concise execution-health note for known failed or refused calls, dependency skips, recovery and unresolved gaps, separate from candidate verification. Preserve delegated execution_success when returned; do not predict the coordinator's eventual execution result or erase earlier failures because later checks passed."
   ],
   "response_instructions": [
+    "Preserve the exact review response's acceptance_scope in reporting: for draft_pr, name its deferred_runtime_checks as unperformed and pending deployment approval, even if the review prose omits them. Do not infer deferrals from missing scope or treat policy metadata as an approval receipt.",
     "For a historical publication, distinguish its original draft-creation receipt from fresh get_remediation_state evidence. Attribute externally observed closure or merge to the GitHub observation and its time, rather than claiming the publication tool performed that action or that production is resolved.",
-    "Name only receipt identifiers and pull-request metadata returned by capabilities, preserve unresolved limitations, and call a pull request draft unless an external system independently changes its state."
+    "Name only receipt identifiers and pull-request metadata returned by capabilities, preserve unresolved limitations, and call a pull request draft unless an external system independently changes its state.",
+    "Cross-check material absence, success and completion claims in the PR text and final summary against recorded results. Preserve known execution failures and recovery alongside the exact candidate's checks; do not claim no evidence was returned when results were merely ineligible, expired or uninspected."
   ],
   "tool_hints": [
     "Use the bounded draft-publication capability only after actual candidate, verification, and independent-review results are available."
@@ -19,11 +23,11 @@
     {
       "name": "publication-report-checklist",
       "description": "Checks that a maintenance publication statement matches the recorded effect.",
-      "load_when": "Load when synthesizing a candidate, review, or draft pull-request outcome.",
+      "load_when": "Load when composing a PR body for publication or synthesizing a candidate, review, or draft-PR outcome.",
       "applies_to": ["planning", "continuation", "synthesis"],
       "required_when_selected": true,
       "content_type": "text/markdown",
-      "content": "Bind a new-publication report to the case, candidate, verification, and review receipts. Distinguish a publication request from a successful draft-PR receipt. Include the returned repository, branch, pull-request URL, and draft state when present. The publication receipt proves draft creation only. A fresh authorized external observation may separately establish later PR closure or merge, attributed to that observation and its time. Release, deployment, and production resolution require their own evidence. Preserve receipt expiry, profile readiness, and other current limitations."
+      "content": "For the publication call's PR body and the final report, bind claims to exact case, candidate, verification and review receipts. State the proposed behavior and observed candidate checks. Add a compact execution-health note covering known failed/refused calls, dependency skips, subsequent recovery and remaining gaps; passing candidate checks do not erase those events. Check negative claims against actual lookup outcomes, including returned-but-ineligible history. Distinguish a publication request from a successful draft-PR receipt; include returned repository, branch, PR URL and draft state when present. Do not predict a final coordinator execution flag while it is running. Publication proves draft creation only; fresh external observations establish later closure or merge with their own attribution. Preserve receipt expiry, profile readiness and current limitations; release, deployment and production resolution need separate evidence. When review approval is scoped to a draft PR, name the explicitly deferred runtime checks as pending deployment requirements. Do not imply they passed or that draft approval authorizes deployment."
     }
   ],
   "activation_examples": {
@@ -36,5 +40,5 @@
       "Develop a regression test for this suspected defect."
     ]
   },
-  "change_reason": "Separate historical draft-creation claims from freshly observed external PR transitions"
+  "change_reason": "Use structured server-owned review scope for PR and final-report runtime deferrals without relying on reviewer prose"
 }

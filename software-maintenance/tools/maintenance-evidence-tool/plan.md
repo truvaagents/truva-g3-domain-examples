@@ -1,8 +1,6 @@
 # Maintenance evidence tool — implementation reference
 
-Current as of the v0.6.0 acceptance run on 2026-10-13. This replaces the initial
-pre-deployment plan and synthetic examples. Use the
-[README](../../README.md) for setup and the
+Use the [README](../../README.md) for setup and the
 [profile guide](../../PROFILE_SETUP_GUIDE.md) for a credential-safe profile read.
 
 ## Responsibility
@@ -14,7 +12,7 @@ target, inspect GitHub source, execute code or call an LLM.
 
 Implementation lives in [internal/serviceevidence](../../internal/serviceevidence);
 [main.go](main.go) owns service bootstrap. The same evidence reader is reused
-by the assessment tool. Framework dependencies are pinned to v0.6.0.
+by the assessment tool. Framework dependencies are pinned to v0.6.2.
 
 ## Capabilities and field relationships
 

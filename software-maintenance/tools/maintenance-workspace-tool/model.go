@@ -35,6 +35,7 @@ type workspaceProfile struct {
 	AllowedCallers         []string         `json:"allowed_callers"`
 	CandidateStageCallers  []string         `json:"candidate_stage_callers"`
 	DeniedPaths            []string         `json:"denied_paths"`
+	ProtectedPaths         []string         `json:"protected_paths,omitempty"`
 	ExperimentCommands     []commandProfile `json:"experiment_commands"`
 	ReproductionCommandID  string           `json:"reproduction_command_id"`
 	VerificationCommandIDs []string         `json:"verification_command_ids"`
@@ -320,15 +321,16 @@ type publicationBundleResponse struct {
 }
 
 type reviewCandidateFilePreview struct {
-	Path          string `json:"path"`
-	BaseSHA256    string `json:"base_sha256"`
-	ContentSHA256 string `json:"content_sha256,omitempty"`
-	Mode          string `json:"mode,omitempty"`
-	Operation     string `json:"operation"`
-	Test          bool   `json:"test"`
-	TextAvailable bool   `json:"text_available"`
-	ContentText   string `json:"content_text,omitempty"`
-	Truncated     bool   `json:"truncated"`
+	Path          string            `json:"path"`
+	BaseSHA256    string            `json:"base_sha256"`
+	ContentSHA256 string            `json:"content_sha256,omitempty"`
+	TargetSHA256  map[string]string `json:"target_sha256,omitempty"`
+	Mode          string            `json:"mode,omitempty"`
+	Operation     string            `json:"operation"`
+	Test          bool              `json:"test"`
+	TextAvailable bool              `json:"text_available"`
+	ContentText   string            `json:"content_text,omitempty"`
+	Truncated     bool              `json:"truncated"`
 }
 
 type reviewBundleResponse struct {

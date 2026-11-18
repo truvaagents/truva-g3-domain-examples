@@ -153,7 +153,7 @@ func (tool *maintenanceWorkspaceTool) registerCapabilities() {
 		OutputSummary: artifactOutputSummary(),
 	})
 	tool.RegisterCapability(core.Capability{
-		Name: "get_review_bundle", Description: "Returns an exact candidate, bounded text previews of its immutable files, and current trusted verification receipts for independent review. Preview digests bind the readable text to the candidate content; the result does not assert approval. Only the review-agent service identity may call it.",
+		Name: "get_review_bundle", Description: "Returns the exact candidate, digest-bound file previews and trusted verification receipts for independent review. For each staged regression file, target_sha256 reports the hashes read from the reproduction and candidate trees mounted read-only by the corresponding verification jobs. Both must match content_sha256. Only the review-agent service identity may call it.",
 		InputTypes: []string{"json"}, OutputTypes: []string{"json"}, Handler: tool.handleGetReviewBundle,
 		InputSummary: &core.SchemaSummary{RequiredFields: []core.FieldHint{
 			{Name: "case_id", Type: "string"}, {Name: "candidate_id", Type: "string"}, {Name: "verification_id", Type: "string"},
