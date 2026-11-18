@@ -256,7 +256,7 @@ maintenance_prepare_build_context() (
         mkdir -p "$destination/framework" "$destination/software-maintenance"
         # No Git metadata, environment files, investigations or binaries enter
         # the context. The original checkout is never edited by workspace builds.
-        tar -C "$TRUVAG3_ROOT" --exclude='.git' --exclude='.env*' \
+        tar -C "${MAINTENANCE_WORKSPACE_ROOT:-$TRUVAG3_ROOT}" --exclude='.git' --exclude='.env*' \
             --exclude='notes' --exclude='bugs' --exclude='papers' \
             --exclude='coverage*' --exclude='*.test' \
             -cf - ai core memory orchestration resilience telemetry |

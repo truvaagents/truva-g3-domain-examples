@@ -46,7 +46,7 @@ alone is not the complete solution.
 - [Inspect and verify the outcome](#inspect-and-verify-the-outcome), including [read-only monitoring commands](#copyable-read-only-monitoring-commands)
 - [Budgets and timeouts](#budgets-and-timeouts)
 - [Operations and troubleshooting](#operations-and-troubleshooting)
-- [Public-release readiness](#public-release-readiness)
+- [Public-release readiness](#public-release-readiness), including [November 17 Kind verification](#draft-review-and-publication-verification-2026-11-17)
 - [Extensibility and remaining boundaries](#extensibility-and-remaining-boundaries)
 - [Development references](#development-references)
 
@@ -277,12 +277,52 @@ Keep Actions/workflow paths denied and grant only the repository scope required.
 The shipped commit author is a placeholder, not the developer's personal identity;
 configure an organization-owned bot identity before real publication and repin.
 
-Set `OPENROUTER_API_KEY` in **each agent's** `.env` to use the exercised OpenRouter
-configuration. Leave other provider keys empty if you want to force that route.
-The template routes planning and synthesis/default work to
-`deepseek/deepseek-v4.1-flash`, with fast auxiliary work on `openai/gpt-6-luna`.
-These are explicit example choices, not promises about framework defaults.
-Tools do not need AI keys.
+Set `OPENAI_API_KEY` in **each agent's** `.env` for the native OpenAI route.
+The template uses `gpt-6.1-sol` for planning and synthesis and `gpt-6-luna`
+for fast calls. For OpenRouter, set `OPENROUTER_API_KEY` and use the
+`openai/`-prefixed model aliases supplied in the shared template.
+For Kind, set `TRUVAG3_SETUP_AI_PROVIDER=openai` in the shared root `.env`
+and run `./setup.sh rollout` for `repair`, `review`, and `coordinator`.
+Setup installs only the selected provider credential in each agent's
+Kubernetes Secret. Both keys can stay in the component `.env` files.
+
+#### Draft review and deployment acceptance
+
+The supplied owner-configured review scope is `draft_pr`. The workspace runner's
+`repository-check` executes `bash ./setup.sh check` from the immutable reproduction
+or candidate tree. For the pinned Retail Order Service this compiles the application,
+runs vet, and emits uncached JSON test events. The regression must fail at its
+intended assertion on the reproduction tree and the complete check must pass on
+the candidate. `setup.sh` is included in the snapshot but protected from candidate
+edits, so the proposed repair cannot weaken its own verification command.
+
+For each staged regression file, `get_review_bundle` hashes the file in both
+retained trees mounted read-only by the verification jobs. The preview's
+`target_sha256.reproduction` and `target_sha256.candidate` must both match
+`content_sha256` before the tool returns the bundle. Job output has its own
+artifact digest. The input hashes are measured when the reviewer requests the bundle.
+
+Draft approval also requires independent review, exact candidate and contract
+identities, and the existing complete, unexpired trusted receipts. The review
+profile's `acceptance_scope.required_candidate_command_ids` adds a deterministic
+approval requirement; a model's approval cannot replace a missing or failed check.
+The handler supplies this scope and profile limitations to the model as server-owned
+context. The response also returns the profile's `acceptance_scope` as structured
+metadata, so the coordinator can report pending checks even when reviewer prose
+omits them. This metadata grants no approval by itself; the validated review
+receipt remains required. Caller objectives cannot replace the scope. Profiles
+without an acceptance scope omit this response field and do not implicitly defer
+repository requirements. The bound skills carry these rules through planning
+and final-response synthesis.
+
+The listed `deferred_runtime_checks` are candidate deployment, live smoke, real
+persistence, and correlated runtime logs/traces. This example authorizes their
+deferral for a draft PR only. They remain required before deployment approval and
+any claim of runtime validation. Report them as unperformed in the review and PR.
+Traffic against the serving baseline demonstrates the observation; it does not
+validate a candidate running against Redis. A different owner must review this
+stage policy against their repository requirements before enabling it. The policy
+neither authorizes deployment nor waives correctness, regression, or safety checks.
 
 #### Readiness and safe profile changes
 
@@ -392,6 +432,14 @@ and Podman get a context-root ignore policy. Local environments, backups and
 investigation notes are excluded, and host module files are not rewritten.
 `build`/`run` remain published-dependency paths; the workspace option applies
 only to container builds.
+
+To keep the local coordinator on a framework fix across rebuilds, set
+`MAINTENANCE_FRAMEWORK_SOURCE=workspace` in `agents/maintenance-agent/.env`.
+If the code lives in another worktree, set `MAINTENANCE_WORKSPACE_ROOT` there
+to its absolute path. This selects source files for that image. Shared setup
+helpers still come from `TRUVAG3_ROOT`. An explicit release invocation takes
+precedence. Remove the local overrides once the published module pin includes
+the fix.
 
 Agent deployment and rollout attempt skill synchronization before restart.
 `skills-sync` and `skills-check` remain strict operator commands. Runtime
@@ -906,7 +954,7 @@ the coordinator does not reset it. Change the run ID explicitly to re-arm.
 | Logs/metrics | Loki/Grafana at `http://grafana.localhost`; include both maintenance and shared namespaces in queries |
 | Memory | Viewer's `software-maintenance` domain; attributable prior activity, not current publication authority |
 | Assessment | Assessment tool `find_related_assessments` / `get_assessment`; policy compatibility and fresh comparison facts |
-| Candidate/testing | Workspace receipts and bounded artifacts; immutable candidate identity, baseline and candidate checks, log completeness |
+| Candidate/testing | Workspace receipts and bounded artifacts for candidate identity, check outcomes and complete job logs. In the review bundle, compare each regression file's `target_sha256` values with `content_sha256`. |
 | Publication | Publication receipt **and GitHub**; actual draft state, diff, author, title/body and repository/base |
 
 Debug stores contain actual prompts and tool-result data. Configure access,
@@ -1008,8 +1056,10 @@ deployment. Existing `.env` files are not overwritten when the template changes.
 | AI provider-local retry | 0 retries by default for the agents' chain clients; optional TRUVAG3_AI_RETRY_ATTEMPTS override, with ordered chain failover separate |
 | Optional skill-resource selection | No separate attempt timeout by default; inherits the parent deadline, with at most 2 attempts |
 | Investigation concurrency | 1 worker per coordinator pod by default; MAINTENANCE_INVESTIGATION_WORKERS=1..100 |
-| Reasoning headroom | Explicit chain multiplier 1×; planning effort low, auxiliary default none |
+| Reasoning headroom | Explicit chain multiplier 1×. Planning and synthesis use low effort. Auxiliary calls default to none. |
+| Coordinator skill resources | Up to 3 per phase via `TRUVAG3_SKILL_MAX_RESOURCES_PER_PHASE` |
 | Continuation results | 192 KiB total; individual projection remains separately bounded |
+| Review agent | `TRUVAG3_CONTINUATION_RESULT_MAX_CHARS=65536` per result and `TRUVAG3_RESULT_DISTILL_THRESHOLD=65536` bytes during synthesis |
 | Result trimming | 64 KiB per result / 192 KiB total |
 | Source continuation scalar / array sample | 65,536 bytes / 50 entries |
 | Final agent summary | 10,000 UTF-8 bytes each; separate MAINTENANCE_*_MAXIMUM_SUMMARY_BYTES overrides |
@@ -1025,6 +1075,8 @@ Planning/synthesis caps, phases and HTTP settings above are in
 [.env.example](.env.example). Task and AI deadlines are selected by
 [internal/config/diagnostic.go](internal/config/diagnostic.go); the 1× reasoning
 multiplier and per-phase routing are configured in each agent's `agent.go`.
+For an existing deployment, copy the review limits from the [review agent template](agents/maintenance-review-agent/.env.example)
+into that agent's `.env` and run `./setup.sh rollout review`.
 The remaining memory rows include framework defaults, not just explicit example
 overrides. Review them again when updating the pinned framework release.
 
@@ -1101,6 +1153,7 @@ template into their own configuration and keep pod grace longer than drains.
 | Startup rejects credentials | Match identity groups, keep different callers distinct, supply at least 32 characters per service token |
 | Workspace/publication refuses startup | Ready profile requires isolation attestation or explicit development mode; publication-ready profile requires write enablement/credentials |
 | Profile mismatch / stale receipt | Recompute affected pins, rebuild both coordinator and assessment where applicable; drain before policy cutover |
+| Review bundle returns `REGRESSION_INPUT_MISMATCH` or cannot read a staged test | Check whether the requested candidate's reproduction and candidate trees still exist on the workspace PVC. Compare their test files with the exact bytes submitted to `stage_candidate`. |
 | No automatic task | Collection enabled? Fresh run ID/remaining quota? Eligible sample? Correct serving/contract evidence? Inspect collection and admission |
 | Skills absent | Same Redis namespace for publisher/readers? `skills-check`? Required skill admission diagnostics? |
 | No Viewer memory | Domain configured? Coordinator memory hooks active? Lookback, backend health and event retention? |
@@ -1115,12 +1168,52 @@ template into their own configuration and keep pod grace longer than drains.
 | Infrastructure ownership | Implemented: setup operates maintenance workloads only and refuses shared infrastructure creation. |
 | Credential ownership | Implemented: component `.env.example` files, explicit backed-up migration, per-component validation and caller/receiver comparisons. |
 | All-components entry point | Implemented: `deploy-all` and `test-all`; checks stop on failure. |
-| Offline setup verification | Passed: 63 checks via `node setup.test.mjs` (Node.js required for these development checks only), using synthetic credentials and recording helpers; no real cluster or AI requests. |
+| Offline setup verification | Passed 64 checks via `node setup.test.mjs` using synthetic credentials and recording helpers. Node.js is required for the development checks. |
 | Workspace image builds | Historical Docker workspace builds passed. Current v0.6.2 verification uses published release builds; current workspace-mode and Podman images were not reverified. |
 | Published release | Passed: v0.6.2 pins with Go 1.27.3, module verification, fresh race tests and vet, all eight release image builds/rollouts and `test-all`. Running binaries link published v0.6.2 modules without replacements. |
 | Target-service safety and public release | Pending: maintainers review the service for safe public consumption, then explicitly authorize its public release. Changing repository visibility is not a setup step. |
 | Fork portability | Support for configuring the repository identity is available on the target service's `main` starting with commit `c714bf1`, with build-time resolution from GitHub `origin` and an explicit override. Adoption in the selected fork and deployment, followed by a complete run that reads source and creates a draft PR inside a user-owned fork, remains pending; public visibility alone does not close this gate. |
-| Live acceptance | Qualified existing-cluster v0.6.2 result on 2026-11-06: scheduled traffic produced verified draft PR #32 and a stored assessment. Coordinator and review succeeded; repair retained a recovered framework panic and aggregate failure. This is not a clean all-agent pass. |
+| Live acceptance | Passed in existing Kind infrastructure on November 17. Scheduled `SAVE10` traffic exercised repair, verification, independent review and draft publication with the final workspace change. See [November 17 Kind verification](#draft-review-and-publication-verification-2026-11-17). |
+
+### Draft review and publication verification (2026-11-17)
+
+- **Draft publication.** Targeted `COFFEE-250` orders at quantity 10 with no
+  promotion triggered one scheduled case in existing Kind infrastructure. The
+  baseline reproduced the tier-boundary bug and the candidate passed
+  `repository-check`. All three agent executions succeeded. The coordinator
+  opened [draft PR #39](https://github.com/truvaagents/retail-order-service/pull/39)
+  with the exact tested files and listed the deferred runtime checks. The draft
+  was closed before the next scheduled case.
+- **Repair handoff.** A separate scheduled case exercised repair-role v2. The
+  repair agent refreshed the aggregate once after both jobs finished, reused
+  the original job IDs, and used the protected script's fail-fast behavior and
+  exit status to verify the silent build and vet stages. Independent review
+  held publication because the bundle lacked explicit evidence of matching
+  regression inputs in both targets.
+- **Regression input evidence.** After the workspace tool began returning the
+  measured `target_sha256` values, an independent re-review reused the second
+  case's exact candidate and verification jobs. Both measured hashes matched
+  the staged test. The reviewer approved for `draft_pr` with no blocking
+  findings, and the stored approval receipt matched the response. This run
+  ended at independent review. The Go race suite, vet, module verification,
+  63 setup checks, profile validation and Kind `test-all` passed.
+- **Full `SAVE10` run.** After all eight components were rebuilt, seven
+  quantity-11 `COFFEE-250` orders with `SAVE10` reproduced a $100.00 total
+  against the contract's $94.50. Scheduled collection admitted one case.
+  The first candidate failed a `MUG15` control with an incorrect expected
+  value. Repair corrected the test, retained the pricing change and refreshed
+  the terminal verification receipt. The corrected regression failed on the
+  baseline at the intended cap assertions. The candidate passed build, vet and
+  tests. Independent review confirmed matching test hashes in both trees and
+  approved the candidate. The coordinator opened
+  [draft PR #40](https://github.com/truvaagents/retail-order-service/pull/40)
+  with the tested bytes and reported the failed first verification and deferred
+  runtime checks. All three agent executions succeeded using native OpenAI.
+  Jaeger recorded a real tool read and zero spans for the five catalog probes.
+  All eight components passed `test-all` after collection was disabled.
+
+Collection was disabled after verification. A cold install, a full run in a
+user-owned fork, and production-isolation acceptance remain separate gates.
 
 ### Historical packaging review and verification
 

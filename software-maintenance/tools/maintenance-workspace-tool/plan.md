@@ -16,11 +16,16 @@ It is passive: callers propose bounded changes and choose their investigation.
 - `stage_candidate`: check base-file digests and stage exact candidate/test bytes.
 - `run_experiment`: submit an owner-allowed command for an immutable target.
 - `run_verification`: submit the protected reproduction and candidate suite.
+  Repeating the same case and candidate refreshes the aggregate for the existing
+  verification and job IDs.
 - `get_job`: reconcile actual Job state; optional bounded waiting observes
   the existing Job and leaves its state unchanged when the wait expires.
 - `read_job_artifact`: read bounded exact byte ranges; `format=text` supplies
   readable UTF-8 when possible, otherwise base64. Omitted format retains base64.
 - `get_review_bundle`: review-identity-only candidate previews and receipts.
+  For each staged regression file, `target_sha256` reports digests measured in
+  both retained Job trees. The bundle requires both digests to match the staged
+  `content_sha256`.
 - `get_publication_bundle`: internal publication-identity-only eligible bytes
   and verification evidence.
 
@@ -36,10 +41,15 @@ Callers cannot supply arbitrary pod specifications or credentials. Sandbox Jobs
 have no service-account token, secrets or host mounts. The workspace tool alone
 has the required Kubernetes Job permissions; it has no GitHub credential.
 
-The current profile has `verification_ready: true`, a digest-pinned Go 1.27.2
+The current profile has `verification_ready: true`, a digest-pinned Go 1.27.3
 runner and a 300-second Job deadline. Jobs run as nonroot UID 10002 with a
 read-only root filesystem, dropped capabilities and RuntimeDefault seccomp.
 Runner changes require propagating the dependent profile fingerprints.
+
+Both verification targets use the profile's `repository-check` command
+(`bash ./setup.sh check`). The runner mounts each tree read-only. The profile's
+`protected_paths` keeps `setup.sh` available for verification and prevents the
+candidate from editing or deleting it.
 
 Independent environment gates require verified network-isolation attestation
 or explicitly authorized development-only functional acceptance. Kind
@@ -74,6 +84,11 @@ HTTP catalog enrichment and planner rendering. Coverage includes pagination,
 UTF-8 byte limits, authorized command/limit disclosure and strict receipt reads.
 
 ## Verification
+
+The [November 17 Kind checks](../../README.md#draft-review-and-publication-verification-2026-11-17)
+reproduced the intended assertion failure and passed the complete candidate
+check. A later review of the same jobs confirmed that the measured regression
+inputs matched both the staged bytes and each other.
 
 The v0.6.2 run on 2026-11-06 verified three Jobs on the updated Go 1.27.3 runner,
 matching complete artifact bytes to receipts, candidate tests/vet and independent

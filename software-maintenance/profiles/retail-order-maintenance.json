@@ -4,13 +4,13 @@
   "investigation_ready": true,
   "service_profile_id": "retail-order-service",
   "repository_id": "retail-order-service",
-  "expected_service_profile_version": "sha256:88f46ed6d47023ce1aa8904e2f57bfd61669f6c2d2864880a06837320fd8cf4c",
+  "expected_service_profile_version": "sha256:ce9798f829674a4ad0c16f80c790d1082fa04dfa4530a087bbb3add6231100a6",
   "repair_profile_id": "retail-order-repair",
-  "expected_repair_profile_sha256": "5e042a2574ca361332e1c7c96037c1e3bb8e60157d68666f01ae78d00cfd26e8",
+  "expected_repair_profile_sha256": "6edf617c29b982a4e0f95521f01d0ae99d3c351769fc1e30db376bba39ad6322",
   "review_profile_id": "retail-order-review",
-  "expected_review_profile_sha256": "06f23c63447c5f84fe88ed81fc0b94095d4994c673afb079a4c42c65807e0a8a",
+  "expected_review_profile_sha256": "f3868a7a9c5aa3db4f16803f6f165e459bbeeba17f04c963c471dbb913738add",
   "publication_profile_id": "retail-order-publication",
-  "expected_publication_profile_sha256": "646860729b42901f56421138f8943e0c88f0d88f27a54a22044cf14a524dd94a",
+  "expected_publication_profile_sha256": "10f57501e3944b0c5cc2adc1e24572611f33b525784a12f41db97eb2d4421505",
   "allowed_callers": [
     "maintenance-operator"
   ],

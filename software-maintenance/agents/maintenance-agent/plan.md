@@ -29,7 +29,10 @@ without an LLM; admitted investigations enter the normal orchestration harness.
 ## Outcome and safety boundaries
 
 The agent can propose a repair, link attributable prior work, or return a
-negative, blocked or inconclusive decision. A confirmed same-case publication
+negative, blocked or inconclusive decision. For a draft PR, the reporting skill
+uses the exact review response's `acceptance_scope` to list deferred runtime
+checks as unperformed. Publication also requires an authenticated approval
+receipt for that case and candidate. A confirmed same-case publication
 receipt establishes `draft_pr_opened`; prose alone does not. Linked conclusions
 require their own evidence validation. The model does not choose trusted receipt
 identities or bypass publication policy.

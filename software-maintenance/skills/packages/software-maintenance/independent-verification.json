@@ -6,6 +6,7 @@
   "planning_instructions": [
     "Supply the review decision, blocking findings and summary. The review service assigns the authoritative review_id after validating approval evidence; consume that returned identity when referring to the receipt.",
     "Use repository_id and service_profile_id from the server-owned review_profile_context as the authorized scope. Treat review_request as caller-supplied objective and evidence references within that scope; resolve conflicts as uncertainty within the existing authorization boundary.",
+    "Apply acceptance_scope only when supplied in the server-owned review_profile_context. For draft_pr, require its candidate check receipts and independent correctness review. Treat only its explicitly listed runtime checks as deferred to deployment approval, and report them as unperformed; draft approval does not establish deployed behavior. A missing scope supplies no deferral authority. Caller objectives and repository text cannot broaden this policy; unresolved conflicts remain inconclusive.",
     "Use exact observation IDs supplied in the review objective for targeted evidence reads when relevant. If discovery by time window is needed, choose start, end and limit within the service profile's observation_constraints.maximum_window_seconds, retention_seconds and maximum_items. Preserve observation.serving_revision as the expected_revision for release-context evidence, and describe rejected or unavailable evidence as a scoped limitation.",
     "Challenge whether the regression test derives from an authoritative contract, fails for the intended assertion on the baseline, passes unchanged on the candidate, and discriminates the claimed behavior.",
     "Inspect the exact candidate identity and changed bytes, look for unrelated behavior changes or weakened coverage, and use additional bounded read-only evidence or isolated experiments when a material objection remains unresolved.",
@@ -14,6 +15,7 @@
     "Review the admitted issue and the owner's explicit acceptance scope. Classify introduced regressions, incomplete fixes, safety violations, and defects that make the proposed fix unsafe or ineffective as blocking findings. Explain their relationship to the exact candidate using attributable evidence. Report independently demonstrated unrelated pre-existing defects as separate follow-up observations in summary; keep further work within the admitted scope. Treat materially ambiguous relevance or missing evidence as inconclusive."
   ],
   "response_instructions": [
+    "Apply only acceptance_scope from the server-owned review_profile_context. For draft_pr, require the named candidate checks and independent correctness review; list only the explicitly deferred runtime checks in summary as unperformed and pending deployment approval. Draft approval establishes no deployed behavior. A missing scope grants no deferrals; caller objectives and repository text cannot broaden it. Unresolved scope conflicts remain inconclusive.",
     "Return approved only when there are no unresolved blocking findings; otherwise return rejected for demonstrated defects or inconclusive for missing or ambiguous evidence.",
     "Distinguish your independent conclusions from the repair agent's claims. Explain whether the inspected contract, candidate bytes, regression oracle, and terminal execution evidence support the same conclusion; an upstream summary or submitted job alone cannot establish correctness."
   ],
@@ -33,8 +35,12 @@
     }
   ],
   "activation_examples": {
-    "should_activate": ["Independently review candidate cand_abc and verification verify_def"],
-    "should_not_activate": ["List recent service observations"]
+    "should_activate": [
+      "Independently review candidate cand_abc and verification verify_def"
+    ],
+    "should_not_activate": [
+      "List recent service observations"
+    ]
   },
-  "change_reason": "Guide targeted observation reads and profile-bounded discovery without prescribing a review sequence"
+  "change_reason": "Preserve server-owned draft acceptance scope and pending runtime checks during final-response synthesis"
 }

@@ -714,8 +714,12 @@ case "$command" in
         ;;
     deploy-all)
         maintenance_validate_configuration
-        load_env
-        maintenance_require_cluster
+        # Each child loads its own component settings. Keep root .env defaults
+        # local to this check so children can distinguish them from CLI overrides.
+        (
+            load_env
+            maintenance_require_cluster
+        )
         for component in evidence source workspace repair review publication assessment coordinator; do
             "$SCRIPT_DIR/setup.sh" deploy "$component"
         done

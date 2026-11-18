@@ -42,11 +42,16 @@ func (operations *workspaceOperations) runExperiment(ctx context.Context, reques
 			return jobRecord{}, errors.New("candidate does not belong to the workspace")
 		}
 		candidateID = candidate.CandidateID
-		subPath = workspace.WorkspaceID + "/" + candidate.CandidateID + "-" + request.Target
+		subPath = candidate.targetSubPath(request.Target)
 	default:
 		return jobRecord{}, errors.New("experiment target is invalid")
 	}
 	return operations.submitJob(ctx, workspace, profile, candidateID, "", request.Target, request.CommandID, request.IdempotencyKey, subPath, command)
+}
+
+// targetSubPath selects the staged tree mounted read-only by the runner.
+func (candidate candidateRecord) targetSubPath(target string) string {
+	return candidate.WorkspaceID + "/" + candidate.CandidateID + "-" + target
 }
 
 func (operations *workspaceOperations) runVerification(ctx context.Context, candidateID string) (verificationRecord, error) {
@@ -78,14 +83,14 @@ func (operations *workspaceOperations) runVerification(ctx context.Context, cand
 		Status: "pending", CreatedAt: createdAt, UpdatedAt: createdAt,
 	}
 	reproductionCommand := profile.commandByID[profile.ReproductionCommandID]
-	reproduction, err := operations.submitJob(ctx, workspace, profile, candidate.CandidateID, verificationID, "reproduction", reproductionCommand.ID, "verification-reproduction", workspace.WorkspaceID+"/"+candidate.CandidateID+"-reproduction", reproductionCommand)
+	reproduction, err := operations.submitJob(ctx, workspace, profile, candidate.CandidateID, verificationID, "reproduction", reproductionCommand.ID, "verification-reproduction", candidate.targetSubPath("reproduction"), reproductionCommand)
 	if err != nil {
 		return verificationRecord{}, err
 	}
 	record.ReproductionJobID = reproduction.JobID
 	for _, commandID := range profile.VerificationCommandIDs {
 		command := profile.commandByID[commandID]
-		job, err := operations.submitJob(ctx, workspace, profile, candidate.CandidateID, verificationID, "candidate", commandID, "verification-candidate-"+commandID, workspace.WorkspaceID+"/"+candidate.CandidateID+"-candidate", command)
+		job, err := operations.submitJob(ctx, workspace, profile, candidate.CandidateID, verificationID, "candidate", commandID, "verification-candidate-"+commandID, candidate.targetSubPath("candidate"), command)
 		if err != nil {
 			return verificationRecord{}, err
 		}

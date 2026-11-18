@@ -1,7 +1,6 @@
 # Maintenance source tool — implementation reference
 
-Current as of the v0.6.0 acceptance run on 2026-10-13. Setup and profile
-preparation are in the [README](../../README.md) and
+Setup and profile preparation are in the [README](../../README.md) and
 [profile guide](../../PROFILE_SETUP_GUIDE.md).
 
 ## Responsibility and capabilities
@@ -41,8 +40,8 @@ The supplied source profile now has `assessment_ready: true`; the original
 uncommitted-source limitation is no longer the shipped configuration. Readiness
 still depends on the operator's repository, contract and deployed build agreeing.
 
-All maintenance modules pin v0.6.0. The live existing-cluster run resolved the
+All maintenance modules pin v0.6.2. The v0.6.0 existing-cluster run resolved the
 target's immutable source, inspected files and supplied the repair snapshot.
-It does not prove access to a new user's fork. The target-service repository
-provenance portability issue remains an explicit [release gate](../../README.md#public-release-readiness).
+A full investigation using a user-owned fork remains a
+[release gate](../../README.md#public-release-readiness).
 Use `setup.sh` from the solution root; the tool runs on container port 8399.

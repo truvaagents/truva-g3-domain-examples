@@ -119,12 +119,13 @@ configuration checklist, not an instruction to edit every file immediately.
 
 | Profile and fields | How to configure them |
 | --- | --- |
-| Service: `repository`, `contract_references` | Name your fork and default branch. Pin the reviewed requirements document to an available full commit SHA and repository-relative path. The contract must apply to the deployed release. |
+| Service: `repository`, `contract_references` | Name your fork and default branch. Pin `SERVICE_CONTRACT.md` to an available full commit SHA. For another contract document, use its reviewed repository-relative path. The contract must apply to the deployed release. |
 | Service: `upstream.base_url`, `upstream.endpoints` | Keep the supplied in-cluster address and endpoint paths when the service topology/API is unchanged. A different address must be reachable from the evidence pod; changing paths does not adapt an incompatible response schema. |
 | Source: `owner`, `repository`, `default_ref`, `allowed_named_refs` | Point all four at the intended fork and permitted branches. Keep `main` for this walkthrough; supplied smoke probes also use it. |
 | Workspace: `runner_image`, `workspace_pvc` | Retain the digest-pinned Go image and `maintenance-workspaces` PVC for the supplied deployment. A replacement image must contain the required toolchain; a changed PVC name must match the deployed claim and mount. |
-| Workspace: `experiment_commands`, `reproduction_command_id`, `verification_command_ids` | Commands are argument arrays. The supplied `go-test-all` runs `go test -json -count=1 ./...`; `go-vet-all` runs `go vet ./...`. Reproduction and verification IDs must refer to commands in `experiment_commands`. Retain these for an unchanged Go service. |
+| Workspace: `experiment_commands`, `reproduction_command_id`, `verification_command_ids`, `protected_paths` | The supplied `repository-check` runs `bash ./setup.sh check` for reproduction and candidate verification. The reproduction and verification IDs must appear in `experiment_commands`. Keep `setup.sh` in `protected_paths` so the runner can read it and candidates can only change unprotected paths. |
 | Repair/review: profile IDs and `expected_*` pins | Keep IDs referring to the supplied service/workspace. Update pins after their prerequisites are final, using step 5. These pins identify the policy/evidence the agents must use. |
+| Review: `acceptance_scope` | Confirm the owner-approved `draft_pr` scope. Keep its required candidate command IDs aligned with `verification_command_ids`. Review each deferred runtime check against your deployment policy. |
 | Publication: `owner`, `repository`, `base_ref`, `branch_prefix`, `commit_author_*` | Select your fork, its base branch, a repair-branch prefix and a bot identity you control. Publication creates draft PRs within that repository. Author metadata does not supply GitHub authorization. |
 | Maintenance: `assessment_policy` | Retain the supplied checkout rules for the same evidence schema. `signature_paths` and `comparison_paths` select facts for case linking/comparison; `allow_empty_string_paths` permits specified empty values. A new service needs reviewed rules matching its evidence, not just renamed IDs. |
 | Maintenance: `collection` | Keep `enabled=false` through setup. Defaults read a 300-second window with 60-second overlap, up to 50 items, with successful observations sampled using modulus 5. The supported cron expression is `* * * * *`; admission budgets are separate coordinator `.env` settings. |
@@ -275,7 +276,7 @@ Edit `profiles/retail-order-service.json` first:
     {
       "kind": "git",
       "revision": "REPLACE_WITH_THE_VERIFIED_40_HEX_CONTRACT_COMMIT",
-      "path": "README.md"
+      "path": "SERVICE_CONTRACT.md"
     }
   ]
 }
@@ -503,6 +504,25 @@ An environment-only change uses `rollout` for affected components; it does not
 replace embedded profile bytes.
 
 ## Updating profiles later
+
+Review `acceptance_scope` in `retail-order-review.json` when adopting this example.
+It declares the `draft_pr` stage, required candidate command IDs, and the specific
+runtime checks deferred until deployment approval. This is owner policy, supplied
+by the review handler as server-owned model context. An absent scope grants no
+deferrals. Required command IDs are checked against successful trusted candidate
+Job receipts, in addition to existing verification and independent-review gates.
+
+The workspace profile runs `repository-check` (`bash ./setup.sh check`) for both
+reproduction and candidate verification. Confirm that the selected repository's
+command runs offline in the pinned runner image, emits the named regression's JSON
+failure on the reproduction tree, and returns nonzero for build, vet or test failures.
+`protected_paths` prevents candidate edits to verification scripts while permitting
+their inclusion in source snapshots; `denied_paths` forbids paths in both snapshots
+and candidates. Do not put a required verification script in `denied_paths`.
+
+Changing either policy invalidates its raw-file fingerprint. Propagate the
+workspace/review pins downstream before rebuilding their consumers. A past
+approval does not authorize publication under the new profile bytes.
 
 | Change | What to update next |
 | --- | --- |

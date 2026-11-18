@@ -44,7 +44,7 @@ func runSource() error {
 	framework, err := core.NewFramework(tool,
 		core.WithName(sourceToolName), core.WithPort(port), core.WithNamespace(os.Getenv("NAMESPACE")),
 		core.WithDiscovery(true, "redis"), core.WithDevelopmentMode(os.Getenv("DEV_MODE") == "true"),
-		core.WithMiddleware(telemetry.TracingMiddlewareWithConfig(sourceToolName, &telemetry.TracingMiddlewareConfig{ExcludedPaths: []string{"/health", "/ready", "/metrics"}})),
+		core.WithMiddleware(telemetry.TracingMiddlewareWithConfig(sourceToolName, &telemetry.TracingMiddlewareConfig{ExcludedPaths: []string{"/health", "/ready", "/metrics", "/api/capabilities"}})),
 	)
 	if err != nil {
 		return fmt.Errorf("create framework: %w", err)

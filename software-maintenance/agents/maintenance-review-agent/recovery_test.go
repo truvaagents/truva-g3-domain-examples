@@ -28,11 +28,17 @@ func TestRecoveredReviewStillRequiresCompleteVerification(t *testing.T) {
 	}
 	service := serviceProfileResponse{ProfileID: "service", ProfileVersion: "v1", AssessmentReady: true, ContractReferences: []contractReference{{Kind: "contract", Revision: revision, Path: "README.md"}}}
 	agent := &maintenanceReviewAgent{now: func() time.Time { return now }}
-	for _, scenario := range []string{"valid", "pending", "cross-case", "expired", "truncated", "approval-disabled"} {
+	profile.AcceptanceScope = &reviewAcceptanceScope{Stage: "draft_pr", RequiredCandidateCommandIDs: []string{"tests"}, DeferredRuntimeChecks: []string{"live_smoke"}}
+	for _, scenario := range []string{"valid", "pending", "cross-case", "expired", "truncated", "approval-disabled", "missing-required-check", "failed-required-check"} {
 		t.Run(scenario, func(t *testing.T) {
 			scenarioProfile := profile
 			bundle := reviewBundle{Workspace: w, Candidate: c, Verification: v, Jobs: append([]jobRecord(nil), jobs...)}
 			switch scenario {
+			case "missing-required-check":
+				scenarioProfile.AcceptanceScope = &reviewAcceptanceScope{Stage: "draft_pr", RequiredCandidateCommandIDs: []string{"repository-check"}}
+			case "failed-required-check":
+				exit := int32(1)
+				bundle.Jobs[1].Status, bundle.Jobs[1].ExitCode = "failed", &exit
 			case "approval-disabled":
 				scenarioProfile.ReviewReady = false
 			case "pending":

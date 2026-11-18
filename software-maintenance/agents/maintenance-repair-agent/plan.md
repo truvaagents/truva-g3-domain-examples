@@ -1,7 +1,7 @@
 # Maintenance repair agent — implementation reference
 
-Current as of the v0.6.0 acceptance run on 2026-10-13. Use the
-[solution README](../../README.md) for setup and current verification scope.
+Use the [solution README](../../README.md) for setup and current verification
+scope.
 
 ## Goal and framework integration
 
@@ -30,9 +30,11 @@ tool steps. Supported decisions are `candidate_submitted`, `no_change`,
 - A negative decision may preserve exploratory artifacts without recommending them.
 - Candidate submission requires trusted workspace, candidate and verification
   references, matching case/source/profile identities and approved prerequisites.
-- Verification may still be pending/running at submission. A succeeded record
-  must include the required reproduction, suite and publication-eligibility facts.
-  Submission alone does not authorize publication.
+- Verification may still be pending/running at submission. If the aggregate is
+  pending or running and all its jobs have finished, the repair-role skill calls
+  for one `run_verification` call with the same case and candidate before handoff.
+  This refreshes the aggregate using the original jobs. A succeeded record must
+  include the required reproduction, suite and publication-eligibility facts.
 - Aggregate `execution_success` and bounded failed-operation evidence are
   exposed separately. A prior failed attempt is not, by itself, a reason to
   discard later valid evidence.
@@ -44,6 +46,11 @@ workspace-tool responsibilities. Service credentials are separate from
 model-visible parameters.
 
 ## Verification
+
+The [November 17 Kind run](../../README.md#draft-review-and-publication-verification-2026-11-17)
+verified that the repair agent refreshed the aggregate before handoff. It also
+verified that the agent recognized successful build and vet stages from the
+protected script and its exit status when those stages emitted no output.
 
 The v0.6.0 live run produced the correct WELCOME100 candidate and regression:
 baseline failed at the expected assertion, candidate tests and vet passed.

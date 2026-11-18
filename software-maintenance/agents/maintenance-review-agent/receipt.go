@@ -328,6 +328,20 @@ func approvalBlockers(profile reviewProfile, service serviceProfileResponse, bun
 	if !approvalJobsValid(bundle, now) {
 		blockers = append(blockers, "trusted before-and-after job receipts do not satisfy approval policy")
 	}
+	if profile.AcceptanceScope != nil {
+		for _, commandID := range profile.AcceptanceScope.RequiredCandidateCommandIDs {
+			found := false
+			for _, job := range bundle.Jobs {
+				if job.Target == "candidate" && job.CommandID == commandID && job.Status == "succeeded" && job.ExitCode != nil && *job.ExitCode == 0 {
+					found = true
+					break
+				}
+			}
+			if !found {
+				blockers = append(blockers, "missing successful candidate check: "+commandID)
+			}
+		}
+	}
 	return blockers
 }
 

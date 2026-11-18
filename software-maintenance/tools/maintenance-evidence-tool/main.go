@@ -53,7 +53,7 @@ func runEvidence() error {
 		core.WithDiscovery(true, "redis"),
 		core.WithDevelopmentMode(os.Getenv("DEV_MODE") == "true"),
 		core.WithMiddleware(telemetry.TracingMiddlewareWithConfig(toolName, &telemetry.TracingMiddlewareConfig{
-			ExcludedPaths: []string{"/health", "/ready", "/metrics"},
+			ExcludedPaths: []string{"/health", "/ready", "/metrics", "/api/capabilities"},
 		})),
 	)
 	if err != nil {

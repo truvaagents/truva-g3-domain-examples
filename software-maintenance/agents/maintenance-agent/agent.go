@@ -121,6 +121,7 @@ func (agent *maintenanceAgent) InitializeOrchestrator(ctx context.Context, disco
 	}
 	base.SynthesisAIOptions = &orchestration.AIOptionsOverride{
 		Model: orchestration.StringPtr("default"), Temperature: orchestration.Float32Ptr(0.1), ResponseFormat: orchestration.StringPtr("json"),
+		ReasoningEffort: orchestration.StringPtr("low"),
 	}
 	base.MicroResolutionAIOptions = &orchestration.AIOptionsOverride{
 		Model: orchestration.StringPtr("fast"),

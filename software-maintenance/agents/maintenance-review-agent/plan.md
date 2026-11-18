@@ -1,8 +1,6 @@
 # Maintenance review agent — implementation reference
 
-Updated on 2026-10-15 for validation of review objectives. The release verification
-below describes the v0.6.0 acceptance run on 2026-10-13. See the
-[solution README](../../README.md) for setup and verification scope.
+See the [solution README](../../README.md) for setup and verification scope.
 
 ## Framework path and role
 
@@ -37,6 +35,14 @@ candidate, test, workspace, verification and Job, as well as profiles, contract
 references and expiry. An approval unsupported by that evidence returns an
 actionable error; the service does not manufacture a different model verdict.
 
+The workspace bundle supplies measured `target_sha256` values for each staged
+regression file so the reviewer can establish matching bytes in the reproduction
+and candidate trees. The review handler supplies the owner-approved
+`acceptance_scope` as server context and returns it separately from the model
+decision. The supplied `draft_pr` scope requires a successful
+`repository-check` on the candidate. Its listed runtime checks remain pending
+for deployment approval.
+
 The service creates an immutable case-scoped approval receipt only after these
 checks. Only the publication-tool identity can retrieve it through the internal
 `get_review_receipt` endpoint. Aggregate execution health and failed operations
@@ -44,6 +50,11 @@ remain separate facts in the response; a prior failed attempt does not replace
 or invalidate authoritative evidence automatically.
 
 ## Verification
+
+The [November 17 Kind re-review](../../README.md#draft-review-and-publication-verification-2026-11-17)
+reused the saved candidate and jobs. The reviewer cited matching regression
+hashes and approved the exact candidate for draft publication. The stored
+approval receipt matched the response.
 
 In the v0.6.0 existing-cluster run, the reviewer inspected the WELCOME100
 candidate, contract and verification evidence and approved the exact candidate.

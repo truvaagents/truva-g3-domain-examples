@@ -175,6 +175,42 @@ func safeWorkspacePath(root, relative string) (string, error) {
 	return target, nil
 }
 
+// Read the retained inputs from the same subpaths selected for verification.
+// These hashes describe staged bytes, independently of each job's output hash.
+func (operations *workspaceOperations) regressionTargetDigests(candidate candidateRecord, path string, size int, expected [sha256.Size]byte) (map[string]string, error) {
+	digests := make(map[string]string, 2)
+	for _, target := range []string{"reproduction", "candidate"} {
+		tree, err := os.OpenRoot(filepath.Join(operations.root, candidate.targetSubPath(target)))
+		if err != nil {
+			return nil, serviceFailure(err, !errors.Is(err, fs.ErrNotExist))
+		}
+		defer func() { _ = tree.Close() }()
+		info, err := tree.Lstat(path)
+		if err != nil {
+			return nil, serviceFailure(err, !errors.Is(err, fs.ErrNotExist))
+		}
+		if !info.Mode().IsRegular() || info.Size() != int64(size) {
+			return nil, policyFailure("REGRESSION_INPUT_MISMATCH", "The "+target+" regression input differs from the staged file")
+		}
+		file, err := tree.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = file.Close() }()
+		hash := sha256.New()
+		n, err := io.Copy(hash, io.LimitReader(file, int64(size)+1))
+		if err != nil {
+			return nil, err
+		}
+		digest := hash.Sum(nil)
+		if n != int64(size) || !bytes.Equal(digest, expected[:]) {
+			return nil, policyFailure("REGRESSION_INPUT_MISMATCH", "The "+target+" regression input differs from the staged file")
+		}
+		digests[target] = hex.EncodeToString(digest)
+	}
+	return digests, nil
+}
+
 func (operations *workspaceOperations) stageCandidate(ctx context.Context, caller string, request stageCandidateRequest) (candidateRecord, error) {
 	for _, group := range [][]candidateFile{request.Changes, request.Tests} {
 		for _, file := range group {
@@ -280,7 +316,7 @@ func canonicalCandidateFiles(profile workspaceProfile, changes, tests []candidat
 	var total int64
 	validate := func(file candidateFile, test bool) (candidateFile, error) {
 		normalized, err := normalizeWorkspacePath(file.Path)
-		if err != nil || profile.denies(normalized) || (test && !strings.HasSuffix(normalized, "_test.go")) || (!test && strings.HasSuffix(normalized, "_test.go")) || (test && file.Delete) {
+		if err != nil || profile.denies(normalized) || profile.protects(normalized) || (test && !strings.HasSuffix(normalized, "_test.go")) || (!test && strings.HasSuffix(normalized, "_test.go")) || (test && file.Delete) {
 			return candidateFile{}, policyFailure("CANDIDATE_PATH_REJECTED", "Candidate contains a disallowed path, file category, or operation")
 		}
 		if _, exists := seen[normalized]; exists {

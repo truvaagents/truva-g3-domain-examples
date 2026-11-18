@@ -23,28 +23,17 @@
   ],
   "experiment_commands": [
     {
-      "id": "go-test-all",
+      "id": "repository-check",
       "argv": [
-        "go",
-        "test",
-        "-json",
-        "-count=1",
-        "./..."
-      ]
-    },
-    {
-      "id": "go-vet-all",
-      "argv": [
-        "go",
-        "vet",
-        "./..."
+        "bash",
+        "./setup.sh",
+        "check"
       ]
     }
   ],
-  "reproduction_command_id": "go-test-all",
+  "reproduction_command_id": "repository-check",
   "verification_command_ids": [
-    "go-test-all",
-    "go-vet-all"
+    "repository-check"
   ],
   "limits": {
     "workspace_ttl_seconds": 604800,
@@ -61,6 +50,10 @@
     "The runner image is digest-pinned for this acceptance run.",
     "This operator-authorized development run uses functional-acceptance mode. Local NetworkPolicy enforcement has been observed, but these functional receipts do not attest production-grade network isolation.",
     "The functional Kind runner may download pinned Go modules; a production runner must use vendored dependencies or an owner-approved image with enforced egress denial.",
-    "A failing named regression test is execution evidence, but contract provenance and independent review remain separate publication prerequisites."
+    "A failing named regression test is execution evidence, but contract provenance and independent review remain separate publication prerequisites.",
+    "The repository-check command executes the repository-defined offline build, vet and test gate. setup.sh is readable but protected from candidate changes."
+  ],
+  "protected_paths": [
+    "setup.sh"
   ]
 }

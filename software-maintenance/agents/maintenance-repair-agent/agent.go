@@ -89,9 +89,10 @@ func (agent *maintenanceRepairAgent) InitializeOrchestrator(ctx context.Context,
 		ReasoningEffort: orchestration.StringPtr("low"),
 	}
 	base.SynthesisAIOptions = &orchestration.AIOptionsOverride{
-		Model:          orchestration.StringPtr("default"),
-		Temperature:    orchestration.Float32Ptr(0.1),
-		ResponseFormat: orchestration.StringPtr("json"),
+		Model:           orchestration.StringPtr("default"),
+		Temperature:     orchestration.Float32Ptr(0.1),
+		ResponseFormat:  orchestration.StringPtr("json"),
+		ReasoningEffort: orchestration.StringPtr("low"),
 	}
 	base.MicroResolutionAIOptions = &orchestration.AIOptionsOverride{
 		Model: orchestration.StringPtr("fast"),
